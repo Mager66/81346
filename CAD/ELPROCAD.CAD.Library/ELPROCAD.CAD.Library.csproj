@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+  <TargetFrameworks>net472;net8.0</TargetFrameworks>
+  <LangVersion>12.0</LangVersion>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <Nullable>enable</Nullable>
+  <Configurations>Debug;Release;BRX_APP;BRX_23</Configurations>
+  <Platforms>AnyCPU;x64</Platforms>
+</PropertyGroup>
+	
+	<PropertyGroup Condition="'$(Configuration)' == 'BRX_23'">
+  <TargetFrameworks>net472</TargetFrameworks>
+  <DefineConstants>$(DefineConstants);BRX_APP</DefineConstants>
+</PropertyGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="10.0.13" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+  <Reference Include="System.Net.Http" />
+</ItemGroup>
+	
+	<ItemGroup Condition="'$(Configuration)' == 'BRX_23'">
+		<COMReference Include="BricscadApp">
+			<VersionMinor>0</VersionMinor>
+			<VersionMajor>23</VersionMajor>
+			<Guid>96586cb6-6d0c-416c-a680-b6d55c40c09c</Guid>
+			<Lcid>0</Lcid>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Isolated>false</Isolated>
+			<EmbedInteropTypes>false</EmbedInteropTypes>
+		</COMReference>
+		
+		<Reference Include="BrxMgd">
+			<HintPath>C:\Program Files\Bricsys\BricsCAD V23 en_US\BrxMgd.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		
+		<Reference Include="TD_Mgd">
+			<HintPath>C:\Program Files\Bricsys\BricsCAD V23 en_US\TD_Mgd.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+</Project>

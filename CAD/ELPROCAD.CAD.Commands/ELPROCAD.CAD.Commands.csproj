@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<LangVersion>12.0</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Configurations>Debug;Release;BRX_APP;BRX_23</Configurations>
+		<Platforms>AnyCPU;x64</Platforms>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net472;net8.0-windows</TargetFrameworks>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'BRX_23'">
+		<TargetFrameworks>net472</TargetFrameworks>
+		<DefineConstants>$(DefineConstants);BRX_APP</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+		<COMReference Include="BricscadApp">
+			<VersionMinor>0</VersionMinor>
+			<VersionMajor>23</VersionMajor>
+			<Guid>96586cb6-6d0c-416c-a680-b6d55c40c09c</Guid>
+			<Lcid>0</Lcid>
+			<WrapperTool>tlbimp</WrapperTool>
+			<Isolated>false</Isolated>
+			<EmbedInteropTypes>False</EmbedInteropTypes>
+		</COMReference>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1"/>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.Data\ELPROCAD.CAD.Data.csproj"/>
+		<ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.TestWPF\ELPROCAD.CAD.TestWPF.csproj"/>
+		<ProjectReference Include="..\ELPROCAD.CAD.Library\ELPROCAD.CAD.Library.csproj"/>
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="BrxMgd">
+			<HintPath>..\..\..\..\..\Program Files\Bricsys\BricsCAD V23 en_US\BrxMgd.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<PackageReference Include="DevExpress.Xpo" Version="23.2.3"/>
+		<Reference Include="TD_Mgd">
+			<HintPath>..\..\..\..\..\Program Files\Bricsys\BricsCAD V23 en_US\TD_Mgd.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+</Project>

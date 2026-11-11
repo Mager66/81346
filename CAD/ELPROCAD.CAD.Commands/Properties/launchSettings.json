@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "ELPROCAD.CAD.Commands": {
+      "commandName": "Project"
+    },
+    "BCAD Debug": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Bricsys\\BricsCAD V23 en_US\\bricscad.exe"
+    }
+  }
+}
