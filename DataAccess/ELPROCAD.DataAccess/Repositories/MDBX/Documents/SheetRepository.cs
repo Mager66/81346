@@ -98,14 +98,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Documents
 				entity.LoadedVersion,
 				validateDatabase: (unitOfWork, existing) =>
 				{
-					var hasObjects = new XPQuery<EngineeringObject>(unitOfWork)
-						.Any(item => item.SheetId == existing.Id);
+					var hasSymbols = new XPQuery<CadSymbolLink>(unitOfWork)
+						.Any(link => link.SheetId == existing.Id);
 
-					return hasObjects
-						? ValidationResults.Failure(
-							string.Empty,
-							"The sheet cannot be deleted while engineering objects reference it.")
-						: new ValidationResult();
+					return hasSymbols
+					? ValidationResults.Failure(
+						string.Empty,
+						"The sheet cannot be deleted while CAD symbol links reference it.")
+					: new ValidationResult();
 				});
 		}
 

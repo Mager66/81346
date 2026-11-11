@@ -13,8 +13,12 @@ namespace ELPROCAD.DataAccess.Models.MDBX.Objects
 		public Guid ProjectId { get; set; }
 
 		// Objects may exist before they are represented on a sheet.
-		[Indexed]
-		public Guid? SheetId { get; set; }
+		/// <summary>
+		/// Retains the previous sheet reference until existing symbol links
+		/// have been migrated. New operations must not populate this property.
+		/// </summary>
+		[Persistent("SheetId")]
+		public Guid? LegacySheetId { get; set; }
 
 		[Indexed]
 		public Guid? PowerFunctionId { get; set; }
@@ -33,5 +37,13 @@ namespace ELPROCAD.DataAccess.Models.MDBX.Objects
 
 		[Indexed]
 		public Guid? ProductId { get; set; }
+
+		/// <summary>
+		/// Stores the deletion marker without removing the object or its relations.
+		/// </summary>
+		public DateTime? DeletedAtUtc { get; set; }
+
+		[NonPersistent]
+		public bool IsMarkedForDeletion => DeletedAtUtc.HasValue;
 	}
 }

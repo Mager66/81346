@@ -70,8 +70,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			return result.Value!;
 		}
 
-		[Fact(DisplayName =
-			"A registered symbol can be retrieved by document and block handle")]
+		[Fact(DisplayName =	"A registered symbol can be retrieved by document and block handle")]
 		public void Create_GetByBlock_ReturnsLink()
 		{
 			var document = AddDocument();
@@ -89,8 +88,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.NotNull(stored.LoadedVersion);
 		}
 
-		[Fact(DisplayName =
-			"An existing symbol link cannot be replaced by another object")]
+		[Fact(DisplayName =	"An existing symbol link cannot be replaced by another object")]
 		public void Create_ExistingBlock_IsRejected()
 		{
 			var document = AddDocument();
@@ -116,8 +114,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 				_mdbx.CadSymbolLink.GetByDocumentId(document.Id));
 		}
 
-		[Fact(DisplayName =
-			"A symbol link requires an existing document")]
+		[Fact(DisplayName =	"A symbol link requires an existing document")]
 		public void Create_MissingDocument_IsRejected()
 		{
 			var entity = AddObject();
@@ -130,8 +127,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Empty(_mdbx.CadSymbolLink.GetByObjectId(entity.Id));
 		}
 
-		[Fact(DisplayName =
-			"A symbol link requires an existing engineering object")]
+		[Fact(DisplayName =	"A symbol link requires an existing engineering object")]
 		public void Create_MissingObject_IsRejected()
 		{
 			var document = AddDocument();
@@ -144,8 +140,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Empty(_mdbx.CadSymbolLink.GetByDocumentId(document.Id));
 		}
 
-		[Fact(DisplayName =
-			"A symbol cannot reference an object from another project")]
+		[Fact(DisplayName =	"A symbol cannot reference an object from another project")]
 		public void Create_DifferentProjects_IsRejected()
 		{
 			// Documents store the external project identifier as a scalar.
@@ -160,8 +155,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Empty(_mdbx.CadSymbolLink.GetByDocumentId(document.Id));
 		}
 
-		[Fact(DisplayName =
-			"Multiple symbols can be registered for the same object")]
+		[Fact(DisplayName =	"Multiple symbols can be registered for the same object")]
 		public void Create_MultipleSymbolsForObject_IsAllowed()
 		{
 			var document = AddDocument();
@@ -178,8 +172,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 				_mdbx.CadSymbolLink.GetByObjectId(entity.Id).Count);
 		}
 
-		[Fact(DisplayName =
-			"A document with registered symbols cannot be deleted")]
+		[Fact(DisplayName =	"A document with registered symbols cannot be deleted")]
 		public void DeleteDocument_WithSymbolLink_IsRejected()
 		{
 			var document = AddDocument();
@@ -202,27 +195,169 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.NotNull(_mdbx.Document.GetById(document.Id));
 		}
 
-		[Fact(DisplayName =
-			"An object with registered symbols cannot be deleted")]
-		public void DeleteObject_WithSymbolLink_IsRejected()
+		[Fact(DisplayName =	"Deleting an object preserves its registered CAD symbols")]
+		public void DeleteObject_WithSymbolLink_PreservesLink()
 		{
 			var document = AddDocument();
 			var entity = AddObject();
 
-			Require(_mdbx.CadSymbolLink.Create(
-				document.Id, 0x63F, entity.Id));
+			var link = Require(_mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x63F,
+				entity.Id));
 
-			// Link creation changes the object's dependency version.
 			entity = _mdbx.EngineeringObject.GetById(entity.Id)!;
 
-			var result = _mdbx.EngineeringObject.Delete(entity);
+			Assert.True(_mdbx.EngineeringObject.Delete(entity).IsValid);
 
-			Assert.False(result.IsValid);
-			Assert.Contains(
-				result.Errors,
-				error => error.ErrorMessage ==
-					"The engineering object cannot be deleted while CAD symbols reference it.");
+			var storedObject = _mdbx.EngineeringObject.GetById(entity.Id)!;
+			var storedLink = _mdbx.CadSymbolLink.GetByBlock(document.Id, 0x63F);
 
+			Assert.True(storedObject.IsMarkedForDeletion);
+			Assert.NotNull(storedLink);
+			Assert.Equal(link.Id, storedLink!.Id);
+			Assert.Equal(entity.Id, storedLink.EngineeringObjectId);
+		}
+
+		[Fact(DisplayName =	"Restoring an object preserves its identity and existing CAD symbol link")]
+		public void RestoreObject_WithSymbolLink_PreservesIdentityAndLink()
+		{
+			var document = AddDocument();
+			var entity = AddObject();
+
+			var createdLink = _mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x542,
+				entity.Id);
+
+			Assert.True(createdLink.Validation.IsValid);
+			Assert.NotNull(createdLink.Value);
+
+			// Creating a symbol link changes the object's dependency version.
+			var current = _mdbx.EngineeringObject.GetById(entity.Id)!;
+
+			var deleted = _mdbx.EngineeringObject.Delete(current);
+
+			Assert.True(deleted.IsValid);
+
+			var marked = _mdbx.EngineeringObject.GetById(entity.Id)!;
+
+			Assert.True(marked.IsMarkedForDeletion);
+			Assert.NotNull(marked.DeletedAtUtc);
+
+			var restored = _mdbx.EngineeringObject.Restore(marked);
+
+			Assert.True(restored.Validation.IsValid);
+			Assert.NotNull(restored.Value);
+			Assert.Equal(entity.Id, restored.Value!.Id);
+			Assert.False(restored.Value.IsMarkedForDeletion);
+			Assert.Null(restored.Value.DeletedAtUtc);
+
+			// Verify the persisted state through a new database operation.
+			var stored = _mdbx.EngineeringObject.GetById(entity.Id)!;
+			var link = _mdbx.CadSymbolLink.GetByBlock(
+				document.Id,
+				0x542);
+
+			Assert.False(stored.IsMarkedForDeletion);
+			Assert.Null(stored.DeletedAtUtc);
+			Assert.Equal(entity.LocationId, stored.LocationId);
+
+			Assert.NotNull(link);
+			Assert.Equal(createdLink.Value!.Id, link!.Id);
+			Assert.Equal(entity.Id, link.EngineeringObjectId);
+		}
+
+		[Fact(DisplayName =	"A new CAD symbol link cannot reference an object marked for deletion")]
+		public void CreateLink_MarkedObject_IsRejected()
+		{
+			var document = AddDocument();
+			var entity = AddObject();
+
+			var deleted = _mdbx.EngineeringObject.Delete(entity);
+
+			Assert.True(deleted.IsValid);
+
+			var result = _mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x543,
+				entity.Id);
+
+			Assert.False(result.Validation.IsValid);
+			Assert.Null(result.Value);
+
+			Assert.Null(
+				_mdbx.CadSymbolLink.GetByBlock(document.Id, 0x543));
+
+			// A rejected link must not restore the object.
+			var stored = _mdbx.EngineeringObject.GetById(entity.Id)!;
+
+			Assert.True(stored.IsMarkedForDeletion);
+		}
+
+		[Fact(DisplayName =	"Deleting a CAD symbol link preserves its engineering object and document")]
+		public void DeleteLink_PreservesObjectAndDocument()
+		{
+			var document = AddDocument();
+			var entity = AddObject();
+
+			var created = _mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x542,
+				entity.Id);
+
+			Assert.True(created.Validation.IsValid);
+			Assert.NotNull(created.Value);
+
+			var result = _mdbx.CadSymbolLink.Delete(created.Value!);
+
+			Assert.True(result.IsValid);
+			Assert.Null(
+				_mdbx.CadSymbolLink.GetByBlock(document.Id, 0x542));
+
+			var stored = _mdbx.EngineeringObject.GetById(entity.Id);
+
+			Assert.NotNull(stored);
+			Assert.False(stored!.IsMarkedForDeletion);
+			Assert.Equal(entity.LocationId, stored.LocationId);
+			Assert.NotNull(_mdbx.Document.GetById(document.Id));
+		}
+
+		[Fact(DisplayName =	"Deleting one CAD symbol link preserves other links to the same object")]
+		public void DeleteLink_PreservesOtherLinks()
+		{
+			var document = AddDocument();
+			var entity = AddObject();
+
+			var first = _mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x542,
+				entity.Id);
+
+			var second = _mdbx.CadSymbolLink.Create(
+				document.Id,
+				0x543,
+				entity.Id);
+
+			Assert.True(first.Validation.IsValid);
+			Assert.True(second.Validation.IsValid);
+
+			// Reload the link before deleting it.
+			var link = _mdbx.CadSymbolLink.GetByBlock(
+				document.Id,
+				0x542);
+
+			Assert.NotNull(link);
+
+			var result = _mdbx.CadSymbolLink.Delete(link!);
+
+			Assert.True(result.IsValid);
+
+			var remaining = Assert.Single(
+				_mdbx.CadSymbolLink.GetByObjectId(entity.Id));
+
+			Assert.Equal(second.Value!.Id, remaining.Id);
+			Assert.Equal(0x543L, remaining.BlockHandle);
 			Assert.NotNull(_mdbx.EngineeringObject.GetById(entity.Id));
 		}
 

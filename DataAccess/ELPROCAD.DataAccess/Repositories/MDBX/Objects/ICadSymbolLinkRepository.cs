@@ -26,7 +26,18 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		/// </summary>
 		(ICadSymbolLink? Value, ValidationResult Validation) Create(
 			Guid documentId,
+			Guid sheetId,
 			long blockHandle,
 			Guid engineeringObjectId);
+
+		/// <summary>
+		/// Removes a CAD symbol link without deleting its engineering object.
+		/// </summary>
+		ValidationResult Delete(ICadSymbolLink entity);
+
+		/// <summary>
+		/// Gets the CAD symbol links belonging to a sheet.
+		/// </summary>
+		IReadOnlyList<ICadSymbolLink> GetBySheetId(Guid sheetId);
 	}
 }

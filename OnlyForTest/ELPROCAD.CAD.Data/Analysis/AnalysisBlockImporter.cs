@@ -111,6 +111,12 @@ namespace ELPROCAD.CAD.Data.Analysis
 						document.Id,
 						block.ObjectId.Handle.Value);
 
+					if (registered != null && registered.SheetId != sheet.Id)
+					{
+						throw new InvalidOperationException(
+							"The CAD symbol is registered on another sheet.");
+					}
+
 					if (registered != null &&
 						xdataId.HasValue &&
 						registered.EngineeringObjectId != xdataId.Value)
@@ -153,6 +159,8 @@ namespace ELPROCAD.CAD.Data.Analysis
 							?? throw new InvalidOperationException(
 								"The object referenced by the unregistered symbol does not exist.");
 
+						EnsureObjectIsActive(originalObject);
+
 						if (originalObject.ProjectId != project.Id)
 						{
 							throw new InvalidOperationException(
@@ -179,11 +187,6 @@ namespace ELPROCAD.CAD.Data.Analysis
 							?? throw new InvalidOperationException(
 								"The linked engineering object no longer exists.");
 
-						if (!item.IsMember && entity.SheetId != sheet.Id)
-						{
-							throw new InvalidOperationException(
-								"The engineering object belongs to another sheet.");
-						}
 
 						var location = GetRepresentedLocation(entity, project.Id);
 
@@ -293,7 +296,6 @@ namespace ELPROCAD.CAD.Data.Analysis
 						var update = UpdateLinkedLocation(
 							changed.LinkedObjectId!.Value,
 							project.Id,
-							sheet.Id,
 							targetLevels);
 
 						if (!update.Validation.IsValid)
@@ -350,7 +352,6 @@ namespace ELPROCAD.CAD.Data.Analysis
 
 					var entity = GetOrCreateObject(
 						project.Id,
-						sheet.Id,
 						location.Id);
 
 					item.SourceLocationId = location.Id;
@@ -434,7 +435,7 @@ namespace ELPROCAD.CAD.Data.Analysis
 						item.SourceLocationId!.Value,
 						finalLocations);
 
-					RegisterSymbolLink(document.Id, item.Block.ObjectId.Handle.Value, objectId);
+					RegisterSymbolLink(document.Id, sheet.Id, item.Block.ObjectId.Handle.Value, objectId);
 
 					WriteLocationAttribute(doc, item, finalPath);
 
@@ -453,8 +454,6 @@ namespace ELPROCAD.CAD.Data.Analysis
 							item.Block.ObjectId,
 							objectId);
 					}
-
-					processedBlocks++;
 
 					processedBlocks++;
 				}
@@ -526,7 +525,7 @@ namespace ELPROCAD.CAD.Data.Analysis
 			return locations;
 		}
 
-		private void RegisterSymbolLink(Guid documentId, long blockHandle, Guid engineeringObjectId)
+		private void RegisterSymbolLink(Guid documentId, Guid sheetId, long blockHandle, Guid engineeringObjectId)
 		{
 			var existing = _mdbx.CadSymbolLink.GetByBlock(
 				documentId,
@@ -540,11 +539,18 @@ namespace ELPROCAD.CAD.Data.Analysis
 						"The block is already registered to another engineering object.");
 				}
 
+				if (existing.SheetId != sheetId)
+				{
+					throw new InvalidOperationException(
+						"The CAD symbol is registered on another sheet.");
+				}
+
 				return;
 			}
 
 			Require(_mdbx.CadSymbolLink.Create(
 				documentId,
+				sheetId,
 				blockHandle,
 				engineeringObjectId));
 		}
@@ -710,7 +716,7 @@ namespace ELPROCAD.CAD.Data.Analysis
 				_mdbx.Sheet.Create(documentId, sheetNo));
 		}
 
-		private IEngineeringObject GetOrCreateObject(Guid projectId, Guid sheetId, Guid locationId)
+		private IEngineeringObject GetOrCreateObject(Guid projectId, Guid locationId)
 		{
 			// Reload because creating children or objects changes dependency versions.
 			var location = _mdbx.Location.GetById(locationId)
@@ -724,24 +730,13 @@ namespace ELPROCAD.CAD.Data.Analysis
 					?? throw new InvalidOperationException(
 						"The location references an object that no longer exists.");
 
+				EnsureObjectIsActive(existing);
+
 				if (existing.ProjectId != projectId ||
 					existing.LocationId != location.Id)
 				{
 					throw new InvalidOperationException(
 						"The existing object does not match the imported location.");
-				}
-
-				if (existing.SheetId.HasValue && existing.SheetId != sheetId)
-				{
-					throw new InvalidOperationException(
-						"The object is already associated with another sheet. " +
-						"This import does not move existing objects between sheets.");
-				}
-
-				if (!existing.SheetId.HasValue)
-				{
-					existing.SheetId = sheetId;
-					return Require(_mdbx.EngineeringObject.Update(existing));
 				}
 
 				return existing;
@@ -756,7 +751,6 @@ namespace ELPROCAD.CAD.Data.Analysis
 			}
 
 			var entity = _mdbx.EngineeringObject.New(projectId);
-			entity.SheetId = sheetId;
 			entity.LocationId = location.Id;
 
 			var created = Require(_mdbx.EngineeringObject.Create(entity));
@@ -784,10 +778,14 @@ namespace ELPROCAD.CAD.Data.Analysis
 					"Import its main symbol before its member symbols.");
 			}
 
-			return _mdbx.EngineeringObject.GetById(
+			var entity = _mdbx.EngineeringObject.GetById(
 				location.RepresentedByObjectId.Value)
 				?? throw new InvalidOperationException(
 					"The representing object no longer exists.");
+
+			EnsureObjectIsActive(entity);
+
+			return entity;
 		}
 
 		/// <summary>
@@ -795,6 +793,8 @@ namespace ELPROCAD.CAD.Data.Analysis
 		/// </summary>
 		private ILocation GetRepresentedLocation(IEngineeringObject entity, Guid projectId)
 		{
+			EnsureObjectIsActive(entity);
+
 			if (entity.ProjectId != projectId)
 				throw new InvalidOperationException("The engineering object belongs to another project.");
 
@@ -855,10 +855,12 @@ namespace ELPROCAD.CAD.Data.Analysis
 		}
 
 		/// <summary>
-		/// Applies a requested location path to an existing main symbol's object.
-		/// Object identity and sheet association are preserved.
+		/// Applies a requested location path while preserving object identity.
 		/// </summary>
-		private (ILocation? Value, ValidationResult Validation) UpdateLinkedLocation(Guid objectId, Guid projectId, Guid sheetId, IReadOnlyList<string> targetLevels)
+		private (ILocation? Value, ValidationResult Validation) UpdateLinkedLocation(
+			Guid objectId,
+			Guid projectId,
+			IReadOnlyList<string> targetLevels)
 		{
 			var entity = _mdbx.EngineeringObject.GetById(objectId);
 
@@ -866,31 +868,36 @@ namespace ELPROCAD.CAD.Data.Analysis
 			{
 				return (null, new ValidationResult(new[]
 				{
-					new ValidationFailure(
-						nameof(objectId),
-						"The engineering object referenced by XData no longer exists.")
-				}));
+			new ValidationFailure(
+				nameof(objectId),
+				"The engineering object referenced by XData no longer exists.")
+		}));
 			}
 
 			if (entity.ProjectId != projectId)
 			{
 				return (null, new ValidationResult(new[]
 				{
-					new ValidationFailure(nameof(entity.ProjectId), "The engineering object belongs to another project.")
-				}));
-			}
-
-			if (entity.SheetId != sheetId)
-			{
-				return (null, new ValidationResult(new[]
-				{
-					new ValidationFailure(nameof(entity.SheetId), "The engineering object belongs to another sheet.")
-				}));
+			new ValidationFailure(
+				nameof(entity.ProjectId),
+				"The engineering object belongs to another project.")
+		}));
 			}
 
 			var location = GetRepresentedLocation(entity, projectId);
 
 			return _mdbx.Location.ChangePath(location, targetLevels);
+		}
+
+		private static void EnsureObjectIsActive(IEngineeringObject entity)
+		{
+			if (entity.IsMarkedForDeletion)
+			{
+				throw new InvalidOperationException(
+					$"Engineering object '{entity.Id}' is marked for deletion. " +
+					"The CAD symbol has been preserved. " +
+					"Restore the object or explicitly confirm removal of the symbol.");
+			}
 		}
 
 		private sealed class ImportBlock

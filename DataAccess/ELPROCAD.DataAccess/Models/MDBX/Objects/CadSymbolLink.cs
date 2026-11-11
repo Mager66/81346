@@ -18,5 +18,11 @@ namespace ELPROCAD.DataAccess.Models.MDBX.Objects
 
 		[Indexed]
 		public Guid EngineeringObjectId { get; set; }
+
+		/// <summary>
+		/// Gets or sets the sheet on which the CAD symbol is presented.
+		/// </summary>
+		[Indexed]
+		public Guid SheetId { get; set; }
 	}
 }

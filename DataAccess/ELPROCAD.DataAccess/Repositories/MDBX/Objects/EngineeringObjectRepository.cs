@@ -17,15 +17,15 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		private readonly Read _read;
 		private readonly Create _create;
 		private readonly Update _update;
-		private readonly Delete _delete;
+		//private readonly Delete _delete;
 		private readonly EngineeringObjectValidator _validator = new();
 
-		internal EngineeringObjectRepository(Read read, Create create, Update update, Delete delete)
+		internal EngineeringObjectRepository(Read read, Create create, Update update)//, Delete delete)
 		{
 			_read = read ?? throw new ArgumentNullException(nameof(read));
 			_create = create ?? throw new ArgumentNullException(nameof(create));
 			_update = update ?? throw new ArgumentNullException(nameof(update));
-			_delete = delete ?? throw new ArgumentNullException(nameof(delete));
+			//_delete = delete ?? throw new ArgumentNullException(nameof(delete));
 		}
 
 		public IEngineeringObject New(Guid projectId)
@@ -45,8 +45,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 
 		public IReadOnlyList<IEngineeringObject> GetBySheetId(Guid sheetId)
 		{
+			var objectIds = _read.GetAll<CadSymbolLink>(link => link.SheetId == sheetId)
+				.Select(link => link.EngineeringObjectId)
+				.Distinct()
+				.ToArray();
+
+			if (objectIds.Length == 0)
+				return Array.Empty<IEngineeringObject>();
+
 			return _read.GetAll<EngineeringObject>(
-				entity => entity.SheetId == sheetId);
+				entity => objectIds.Contains(entity.Id));
 		}
 
 		public IReadOnlyList<IEngineeringObject> GetByLocationId(Guid locationId)
@@ -78,6 +86,13 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				CopyObject,
 				(unitOfWork, existing) =>
 				{
+					if (existing.IsMarkedForDeletion)
+					{
+						return ValidationResults.Failure(
+							nameof(IEngineeringObject.IsMarkedForDeletion),
+							"The object is marked for deletion. Restore it before editing.");
+					}
+
 					if (existing.ProjectId != input.ProjectId)
 					{
 						return ValidationResults.Failure(
@@ -91,46 +106,9 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			return (result.Value, result.Validation);
 		}
 
-		public ValidationResult Delete(IEngineeringObject entity)
-		{
-			if (entity == null)
-				throw new ArgumentNullException(nameof(entity));
+		public ValidationResult Delete(IEngineeringObject entity) => SetDeletionState(entity, markDeleted: true).Validation;
 
-			return _delete.Remove<EngineeringObject>(
-				entity.Id,
-				entity.LoadedVersion,
-				validateDatabase: (unitOfWork, existing) =>
-				{
-					var hasSymbolLinks = new XPQuery<CadSymbolLink>(unitOfWork).Any(link => link.EngineeringObjectId == existing.Id);
-
-					if (hasSymbolLinks)
-					{
-						return ValidationResults.Failure(
-							string.Empty,
-							"The engineering object cannot be deleted while CAD symbols reference it.");
-					}
-
-					var representsNode =
-						RepresentsNode<PowerFunction>(unitOfWork, existing.Id)
-						|| RepresentsNode<ControlFunction>(unitOfWork, existing.Id)
-						|| RepresentsNode<TopographicStructure>(unitOfWork, existing.Id)
-						|| RepresentsNode<Location>(unitOfWork, existing.Id)
-						|| RepresentsNode<Function>(unitOfWork, existing.Id)
-						|| RepresentsNode<Product>(unitOfWork, existing.Id);
-
-					return representsNode
-						? ValidationResults.Failure(
-							string.Empty,
-							"The object cannot be deleted while it represents an aspect node.")
-						: new ValidationResult();
-				});
-		}
-		
-		private static bool RepresentsNode<T>(UnitOfWork unitOfWork, Guid objectId)	where T : AspectNode
-		{
-			return new XPQuery<T>(unitOfWork)
-				.Any(node => node.RepresentedByObjectId == objectId);
-		}
+		public (IEngineeringObject? Value, ValidationResult Validation) Restore(IEngineeringObject entity) => SetDeletionState(entity, markDeleted: false);
 
 		private static ValidationResult ValidateReferences(UnitOfWork unitOfWork, EngineeringObject entity)
 		{
@@ -141,7 +119,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				ValidateAspect<PowerFunction>(
 					unitOfWork, entity.PowerFunctionId, entity.ProjectId,
 					nameof(entity.PowerFunctionId), dependencies),
-
+				
 				ValidateAspect<ControlFunction>(
 					unitOfWork, entity.ControlFunctionId, entity.ProjectId,
 					nameof(entity.ControlFunctionId), dependencies),
@@ -149,52 +127,27 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				ValidateAspect<TopographicStructure>(
 					unitOfWork, entity.TopographicStructureId, entity.ProjectId,
 					nameof(entity.TopographicStructureId), dependencies),
-
+				
 				ValidateAspect<Location>(
 					unitOfWork, entity.LocationId, entity.ProjectId,
 					nameof(entity.LocationId), dependencies),
-
+				
 				ValidateAspect<Function>(
 					unitOfWork, entity.FunctionId, entity.ProjectId,
 					nameof(entity.FunctionId), dependencies),
-
+				
 				ValidateAspect<Product>(
 					unitOfWork, entity.ProductId, entity.ProjectId,
 					nameof(entity.ProductId), dependencies)
 			};
-
+			
 			var validation = new ValidationResult(
-			results.SelectMany(result => result.Errors));
+				results.SelectMany(result => result.Errors));
 
 			if (!validation.IsValid)
 				return validation;
 
-			if (entity.SheetId.HasValue)
-			{
-				var sheet = unitOfWork.GetObjectByKey<Sheet>(
-					entity.SheetId.Value);
-
-				if (sheet == null)
-				{
-					return ValidationResults.Failure(
-						nameof(entity.SheetId),
-						"The sheet does not exist.");
-				}
-
-				var document = unitOfWork.GetObjectByKey<Document>(
-					sheet.DocumentId);
-
-				if (document == null || document.ProjectId != entity.ProjectId)
-				{
-					return ValidationResults.Failure(
-						nameof(entity.SheetId),
-						"The sheet must belong to a document in the object's project.");
-				}
-
-				dependencies.Add(sheet);
-			}
-
-			// Commit dependency versions together with the new object.
+			// Commit aspect dependency versions together with the object changes.
 			DependencyVersions.Touch(unitOfWork, dependencies);
 
 			return new ValidationResult();
@@ -231,7 +184,6 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		{
 			target.Id = source.Id;
 			target.ProjectId = source.ProjectId;
-			target.SheetId = source.SheetId;
 			target.PowerFunctionId = source.PowerFunctionId;
 			target.ControlFunctionId = source.ControlFunctionId;
 			target.TopographicStructureId = source.TopographicStructureId;
@@ -249,7 +201,6 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			{
 				Id = entity.Id,
 				ProjectId = entity.ProjectId,
-				SheetId = entity.SheetId,
 				PowerFunctionId = entity.PowerFunctionId,
 				ControlFunctionId = entity.ControlFunctionId,
 				TopographicStructureId = entity.TopographicStructureId,
@@ -259,6 +210,51 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				LoadedVersion = entity.LoadedVersion
 			};
 		}
+
+		private (IEngineeringObject? Value, ValidationResult Validation) SetDeletionState(IEngineeringObject entity, bool markDeleted)
+		{
+			if (entity == null)
+				throw new ArgumentNullException(nameof(entity));
+
+			// Unsaved field edits must not participate in deletion or restoration.
+			var input = new EngineeringObject
+			{
+				Id = entity.Id,
+				LoadedVersion = entity.LoadedVersion
+			};
+
+			var result = _update.Save(input,
+				_ => new ValidationResult(),
+					(unitOfWork, source, target) =>
+					{
+						target.DeletedAtUtc = markDeleted
+						? DateTime.UtcNow
+						: (DateTime?)null;
+					},
+					(unitOfWork, existing) =>
+					{
+						if (existing.IsMarkedForDeletion == markDeleted)
+						{
+							return ValidationResults.Failure(
+								nameof(IEngineeringObject.IsMarkedForDeletion),
+								markDeleted
+									? "The object is already marked for deletion."
+									: "The object is already active.");
+						}
+
+						if (markDeleted)
+							return new ValidationResult();
+
+						// Restoration must not reactivate invalid stored relationships.
+						var validation = _validator.Validate(existing);
+
+						if (!validation.IsValid)
+							return validation;
+
+						return ValidateReferences(unitOfWork, existing);
+					});
+			return (result.Value, result.Validation);
+		}
 	}
-	
+
 }

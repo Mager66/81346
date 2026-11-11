@@ -412,7 +412,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 
 		#region Delete
 
-		[Fact(DisplayName =	"Deleting an object preserves its location and removes its membership")]
+		[Fact(DisplayName =	"Deleting an object marks it while preserving identity and location")]
 		public void Delete_Object_PreservesLocation()
 		{
 			var location = AddLocation("AS1");
@@ -421,11 +421,19 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			var result = _repository.EngineeringObject.Delete(entity);
 
 			Assert.True(result.IsValid);
-			Assert.Null(_repository.EngineeringObject.GetById(entity.Id));
-			Assert.NotNull(_repository.Location.GetById(location.Id));
 
-			Assert.Empty(
-				_repository.EngineeringObject.GetByLocationId(location.Id));
+			var stored = _repository.EngineeringObject.GetById(entity.Id);
+
+			Assert.NotNull(stored);
+			Assert.True(stored!.IsMarkedForDeletion);
+			Assert.NotNull(stored.DeletedAtUtc);
+			Assert.Equal(entity.Id, stored.Id);
+			Assert.Equal(location.Id, stored.LocationId);
+
+			Assert.Equal(
+				entity.Id,
+				Assert.Single(
+					_repository.EngineeringObject.GetByLocationId(location.Id)).Id);
 		}
 
 		[Fact(DisplayName =	"Deleting an object preserves its sheet and document")]
@@ -459,44 +467,43 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.True(deleted.IsValid);
 			Assert.NotNull(_repository.Sheet.GetById(sheet.Value.Id));
 			Assert.NotNull(_repository.Document.GetById(document.Value.Id));
-			Assert.Empty(
-				_repository.EngineeringObject.GetBySheetId(sheet.Value.Id));
+			var stored = _repository.EngineeringObject.GetById(input.Id);
+
+			Assert.NotNull(stored);
+			Assert.True(stored!.IsMarkedForDeletion);
+			Assert.Equal(sheet.Value.Id, stored.SheetId);
+			Assert.Equal(location.Id, stored.LocationId);
+
+			Assert.Equal(
+				input.Id,
+				Assert.Single(
+					_repository.EngineeringObject.GetBySheetId(sheet.Value.Id)).Id);
 		}
 
-		[Fact(DisplayName =	"An object representing a location cannot be deleted until explicitly unlinked")]
-		public void Delete_RepresentingObject_RequiresUnlinking()
+		[Fact(DisplayName =	"Deleting a representing object preserves the representation")]
+		public void Delete_RepresentingObject_PreservesRepresentation()
 		{
 			var location = AddLocation("AS1");
 			var entity = AddObject(location.Id);
 
-			var currentLocation = _repository.Location.GetById(location.Id)!;
+			location = _repository.Location.GetById(location.Id)!;
 
 			var assigned = _repository.Location.SetRepresentingObject(
-				currentLocation,
+				location,
 				entity.Id);
 
 			Assert.True(assigned.Validation.IsValid);
 
-			// Assigning the representation changed the object's dependency version.
-			var currentObject = _repository.EngineeringObject.GetById(entity.Id)!;
+			entity = _repository.EngineeringObject.GetById(entity.Id)!;
 
-			var blocked = _repository.EngineeringObject.Delete(currentObject);
+			Assert.True(_repository.EngineeringObject.Delete(entity).IsValid);
 
-			Assert.False(blocked.IsValid);
-			Assert.NotNull(_repository.EngineeringObject.GetById(entity.Id));
+			var stored = _repository.EngineeringObject.GetById(entity.Id)!;
 
-			var cleared = _repository.Location.SetRepresentingObject(
-				assigned.Value!,
-				null);
-
-			Assert.True(cleared.Validation.IsValid);
-
-			var reloaded = _repository.EngineeringObject.GetById(entity.Id)!;
-			var deleted = _repository.EngineeringObject.Delete(reloaded);
-
-			Assert.True(deleted.IsValid);
-			Assert.Null(_repository.EngineeringObject.GetById(entity.Id));
-			Assert.NotNull(_repository.Location.GetById(location.Id));
+			Assert.True(stored.IsMarkedForDeletion);
+			Assert.Equal(
+				entity.Id,
+				_repository.Location.GetById(location.Id)!.RepresentedByObjectId);
 		}
 
 		[Fact(DisplayName =	"An outdated object cannot delete a subsequently updated record")]
@@ -523,7 +530,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Equal(secondLocation.Id, stored!.LocationId);
 		}
 
-		[Fact(DisplayName =	"Deleting an already deleted object returns an identifier validation error")]
+		[Fact(DisplayName =	"Deleting an already marked object returns a deletion-state validation error")]
 		public void Delete_AlreadyDeletedObject_ReturnsFailure()
 		{
 			var location = AddLocation("AS1");
@@ -531,28 +538,105 @@ namespace ELPROCAD.DataAccess.Tests.Database
 
 			Assert.True(_repository.EngineeringObject.Delete(entity).IsValid);
 
-			var result = _repository.EngineeringObject.Delete(entity);
+			var marked = _repository.EngineeringObject.GetById(entity.Id)!;
+			var result = _repository.EngineeringObject.Delete(marked);
 
 			Assert.False(result.IsValid);
 
 			var error = Assert.Single(result.Errors);
 
-			Assert.Equal(nameof(IEngineeringObject.Id), error.PropertyName);
+			Assert.Equal(
+				nameof(IEngineeringObject.IsMarkedForDeletion),
+				error.PropertyName);
+
+			var stored = _repository.EngineeringObject.GetById(entity.Id)!;
+
+			Assert.True(stored.IsMarkedForDeletion);
+			Assert.Equal(marked.DeletedAtUtc, stored.DeletedAtUtc);
+			Assert.Equal(marked.LoadedVersion, stored.LoadedVersion);
 		}
 
-		[Fact(DisplayName =	"Deleting an object does not require valid unsaved aspect memberships")]
+		[Fact(DisplayName =	"Deletion ignores unsaved edits and preserves stored memberships")]
 		public void Delete_InvalidLocalValues_UsesStoredIdentityAndVersion()
 		{
 			var location = AddLocation("AS1");
 			var entity = AddObject(location.Id);
 
-			// Unsaved edits must not prevent deletion of the current stored record.
+			// Unsaved edits must not affect the stored relationships.
 			entity.LocationId = null;
 
 			var result = _repository.EngineeringObject.Delete(entity);
 
 			Assert.True(result.IsValid);
-			Assert.Null(_repository.EngineeringObject.GetById(entity.Id));
+
+			var stored = _repository.EngineeringObject.GetById(entity.Id);
+
+			Assert.NotNull(stored);
+			Assert.True(stored!.IsMarkedForDeletion);
+			Assert.Equal(location.Id, stored.LocationId);
+		}
+
+		[Fact(DisplayName =	"Restoring an object preserves its identity and location")]
+		public void Restore_PreservesIdentityAndLocation()
+		{
+			var location = AddLocation("AS1");
+			var entity = AddObject(location.Id);
+
+			Assert.True(_repository.EngineeringObject.Delete(entity).IsValid);
+
+			var marked = _repository.EngineeringObject.GetById(entity.Id)!;
+
+			var result = _repository.EngineeringObject.Restore(marked);
+
+			Assert.True(result.Validation.IsValid);
+			Assert.NotNull(result.Value);
+			Assert.Equal(entity.Id, result.Value!.Id);
+			Assert.Equal(location.Id, result.Value.LocationId);
+			Assert.False(result.Value.IsMarkedForDeletion);
+			Assert.Null(result.Value.DeletedAtUtc);
+
+			var stored = _repository.EngineeringObject.GetById(entity.Id)!;
+
+			Assert.False(stored.IsMarkedForDeletion);
+			Assert.Null(stored.DeletedAtUtc);
+		}
+
+		[Fact(DisplayName =	"A deletion-marked object cannot be updated through ordinary editing")]
+		public void Update_MarkedObject_IsRejected()
+		{
+			var firstLocation = AddLocation("AS1");
+			var secondLocation = AddLocation("AS2");
+			var entity = AddObject(firstLocation.Id);
+
+			Assert.True(_repository.EngineeringObject.Delete(entity).IsValid);
+
+			var marked = _repository.EngineeringObject.GetById(entity.Id)!;
+			marked.LocationId = secondLocation.Id;
+
+			var result = _repository.EngineeringObject.Update(marked);
+
+			Assert.False(result.Validation.IsValid);
+
+			var stored = _repository.EngineeringObject.GetById(entity.Id)!;
+
+			Assert.True(stored.IsMarkedForDeletion);
+			Assert.Equal(firstLocation.Id, stored.LocationId);
+		}
+
+		[Fact(DisplayName =	"An outdated version cannot restore a subsequently deleted object")]
+		public void Restore_StaleVersion_IsRejected()
+		{
+			var location = AddLocation("AS1");
+			var original = AddObject(location.Id);
+
+			Assert.True(_repository.EngineeringObject.Delete(original).IsValid);
+
+			var result = _repository.EngineeringObject.Restore(original);
+
+			Assert.False(result.Validation.IsValid);
+			Assert.True(
+				_repository.EngineeringObject.GetById(original.Id)!
+					.IsMarkedForDeletion);
 		}
 
 		#endregion Delete

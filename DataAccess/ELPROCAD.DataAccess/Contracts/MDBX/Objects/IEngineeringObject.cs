@@ -7,8 +7,6 @@
 	{
 		Guid ProjectId { get; }
 
-		Guid? SheetId { get; set; }
-
 		Guid? PowerFunctionId { get; set; }
 
 		Guid? ControlFunctionId { get; set; }
@@ -22,5 +20,13 @@
 		Guid? ProductId { get; set; }
 
 		int? LoadedVersion { get; }
+
+		/// <summary>
+		/// Gets when the object was marked for deletion.
+		/// Null indicates an active object.
+		/// </summary>
+		DateTime? DeletedAtUtc { get; }
+
+		bool IsMarkedForDeletion { get; }
 	}
 }

@@ -12,6 +12,10 @@ namespace ELPROCAD.DataAccess.Validation.MDBX.Objects
 				.NotEmpty()
 				.WithMessage("A document identifier is required.");
 
+			RuleFor(entity => entity.SheetId)
+				.NotEmpty()
+				.WithMessage("A sheet is required.");
+
 			RuleFor(entity => entity.BlockHandle)
 				.NotEqual(0L)
 				.WithMessage("A non-zero block handle is required.");

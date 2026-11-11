@@ -13,5 +13,10 @@
 		Guid EngineeringObjectId { get; }
 
 		int? LoadedVersion { get; }
+
+		/// <summary>
+		/// Gets the sheet on which the CAD symbol is presented.
+		/// </summary>
+		Guid SheetId { get; }
 	}
 }

@@ -3,6 +3,7 @@ using DevExpress.Xpo.DB;
 using ELPROCAD.DataAccess.Changes.Locations;
 using ELPROCAD.DataAccess.CRUD;
 using ELPROCAD.DataAccess.Database;
+using ELPROCAD.DataAccess.Database.Migrations;
 using ELPROCAD.DataAccess.Models.MDBX.Aspects;
 using ELPROCAD.DataAccess.Models.MDBX.Documents;
 using ELPROCAD.DataAccess.Models.MDBX.Objects;
@@ -80,6 +81,14 @@ namespace ELPROCAD.DataAccess
 				});
 
 			var database = new DatabaseAccess(connectionString);
+
+			// Migrate existing links after updating the schema.
+			// Execute provides a separate unit of work for this operation.
+			database.Execute(unitOfWork =>
+			{
+				CadSymbolLinkSheetMigration.Apply(unitOfWork);
+			});
+
 			var read = new Read(database);
 			var create = new Create(database);
 			var update = new Update(database);
@@ -92,8 +101,8 @@ namespace ELPROCAD.DataAccess
 				new DocumentPropertiesRepository(read),
 				new CadDocumentCustomPropertyRepository(read),
 				new LocationRepository(read, create, update, delete, new MoveLocation(database), new LocationChangeWriter(database)),
-				new EngineeringObjectRepository(read, create, update, delete),
-				new CadSymbolLinkRepository(read, create));
+				new EngineeringObjectRepository(read, create, update),
+				new CadSymbolLinkRepository(read, create, delete));
 		}
 
 		/// <summary>

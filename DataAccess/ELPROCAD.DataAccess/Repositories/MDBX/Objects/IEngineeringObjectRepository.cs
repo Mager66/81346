@@ -44,9 +44,15 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			IEngineeringObject entity);
 
 		/// <summary>
-		/// Deletes an object using its originally loaded version.
-		/// Objects representing aspect nodes must be unlinked before deletion.
+		/// Marks the object for deletion while preserving its identity and relations.
+		/// Uses the originally loaded version.
 		/// </summary>
 		ValidationResult Delete(IEngineeringObject entity);
+
+		/// <summary>
+		/// Restores a deletion-marked object using its originally loaded version.
+		/// Preserves its identity and relations.
+		/// </summary>
+		(IEngineeringObject? Value, ValidationResult Validation) Restore(IEngineeringObject entity);
 	}
 }

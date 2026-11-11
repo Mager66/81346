@@ -12,7 +12,6 @@ namespace ELPROCAD.DataAccess.Validation.MDBX.Objects
 				.NotEmpty()
 				.WithMessage("A project identifier is required.");
 
-			ValidateOptionalReference(entity => entity.SheetId);
 			ValidateOptionalReference(entity => entity.PowerFunctionId);
 			ValidateOptionalReference(entity => entity.ControlFunctionId);
 			ValidateOptionalReference(entity => entity.TopographicStructureId);

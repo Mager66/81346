@@ -15,12 +15,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 	{
 		private readonly Read _read;
 		private readonly Create _create;
+		private readonly Delete _delete;
 		private readonly CadSymbolLinkValidator _validator = new();
 
-		internal CadSymbolLinkRepository(Read read, Create create)
+		internal CadSymbolLinkRepository(Read read, Create create, Delete delete)
 		{
 			_read = read ?? throw new ArgumentNullException(nameof(read));
 			_create = create ?? throw new ArgumentNullException(nameof(create));
+			_delete = delete ?? throw new ArgumentNullException(nameof(delete));
 		}
 
 		public ICadSymbolLink? GetByBlock(Guid documentId, long blockHandle)
@@ -41,6 +43,12 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				.AsReadOnly();
 		}
 
+		public IReadOnlyList<ICadSymbolLink> GetBySheetId(Guid sheetId)
+		{
+			return _read.GetAll<CadSymbolLink>(
+				entity => entity.SheetId == sheetId);
+		}
+
 		public IReadOnlyList<ICadSymbolLink> GetByObjectId(
 			Guid engineeringObjectId)
 		{
@@ -55,12 +63,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 
 		public (ICadSymbolLink? Value, ValidationResult Validation) Create(
 			Guid documentId,
+			Guid sheetId,
 			long blockHandle,
 			Guid engineeringObjectId)
 		{
 			var input = new CadSymbolLink
 			{
 				DocumentId = documentId,
+				SheetId = sheetId,
 				BlockHandle = blockHandle,
 				EngineeringObjectId = engineeringObjectId
 			};
@@ -74,9 +84,17 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			return (result.Value, result.Validation);
 		}
 
-		private static ValidationResult ValidateReferences(
-			UnitOfWork uow,
-			CadSymbolLink input)
+		public ValidationResult Delete(ICadSymbolLink entity)
+		{
+			if (entity == null)
+				throw new ArgumentNullException(nameof(entity));
+
+			return _delete.Remove<CadSymbolLink>(
+				entity.Id,
+				entity.LoadedVersion);
+		}
+
+		private static ValidationResult ValidateReferences(UnitOfWork uow, CadSymbolLink input)
 		{
 			var document = uow.GetObjectByKey<Document>(input.DocumentId);
 
@@ -87,6 +105,22 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 					"The document does not exist.");
 			}
 
+			var sheet = uow.GetObjectByKey<Sheet>(input.SheetId);
+
+			if (sheet == null)
+			{
+				return ValidationResults.Failure(
+					nameof(ICadSymbolLink.SheetId),
+					"The sheet does not exist.");
+			}
+
+			if (sheet.DocumentId != input.DocumentId)
+			{
+				return ValidationResults.Failure(
+					nameof(ICadSymbolLink.SheetId),
+					"The sheet belongs to another document.");
+			}
+
 			var entity = uow.GetObjectByKey<EngineeringObject>(
 				input.EngineeringObjectId);
 
@@ -95,6 +129,13 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				return ValidationResults.Failure(
 					nameof(input.EngineeringObjectId),
 					"The engineering object does not exist.");
+			}
+
+			if (entity.IsMarkedForDeletion)
+			{
+				return ValidationResults.Failure(
+					nameof(input.EngineeringObjectId),
+					"The engineering object is marked for deletion. Restore it before adding symbols.");
 			}
 
 			if (document.ProjectId != entity.ProjectId)
@@ -119,7 +160,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			// Protect both references against concurrent deletion.
 			DependencyVersions.Touch(
 				uow,
-				new VersionedEntity[] { document, entity });
+				new VersionedEntity[] { document, sheet, entity });
 
 			return new ValidationResult();
 		}
@@ -131,6 +172,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		{
 			target.Id = source.Id;
 			target.DocumentId = source.DocumentId;
+			target.SheetId = source.SheetId;
 			target.BlockHandle = source.BlockHandle;
 			target.EngineeringObjectId = source.EngineeringObjectId;
 		}
