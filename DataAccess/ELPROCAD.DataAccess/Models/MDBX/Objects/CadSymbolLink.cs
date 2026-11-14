@@ -24,5 +24,10 @@ namespace ELPROCAD.DataAccess.Models.MDBX.Objects
 		/// </summary>
 		[Indexed]
 		public Guid SheetId { get; set; }
+
+		public DateTime? DetachedAtUtc { get; set; }
+
+		[NonPersistent]
+		public bool IsDetached => DetachedAtUtc.HasValue;
 	}
 }

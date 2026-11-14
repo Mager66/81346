@@ -12,9 +12,8 @@ namespace ELPROCAD.DataAccess.Models.MDBX.Aspects
 		[Indexed]
 		public Guid ProjectId { get; set; }
 
-		// A designation must be unique at its depth within the project's aspect.
-		[Size(255)]
-		[Indexed(nameof(ProjectId) + ";" + nameof(Depth), Unique = true)]
+		// A designation must be unique among siblings within the project.
+		[Indexed(nameof(ProjectId) + ";" + nameof(ParentId), Unique = true)]
 		public string Designation { get; set; } = "";
 
 		// Refers to a node in the same concrete aspect table.

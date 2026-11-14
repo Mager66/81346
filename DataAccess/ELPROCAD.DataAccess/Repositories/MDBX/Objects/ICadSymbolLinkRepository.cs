@@ -1,4 +1,5 @@
 ﻿using ELPROCAD.DataAccess.Contracts.MDBX.Objects;
+using ELPROCAD.DataAccess.Contracts.MDBX.References;
 using FluentValidation.Results;
 
 namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
@@ -31,13 +32,69 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			Guid engineeringObjectId);
 
 		/// <summary>
-		/// Removes a CAD symbol link without deleting its engineering object.
+		/// Gets the CAD symbol links belonging to a sheet.
+		/// </summary>
+		IReadOnlyList<ICadSymbolLink> GetBySheetId(Guid sheetId);
+
+		/// <summary>
+		/// Disconnects the symbol while retaining its identity for later reattachment.
 		/// </summary>
 		ValidationResult Delete(ICadSymbolLink entity);
 
 		/// <summary>
-		/// Gets the CAD symbol links belonging to a sheet.
+		/// Reactivates an existing disconnected symbol link.
 		/// </summary>
-		IReadOnlyList<ICadSymbolLink> GetBySheetId(Guid sheetId);
+		ValidationResult Reattach(ICadSymbolLink entity);
+
+		/// <summary>Reads a symbol's terminal mappings.</summary>
+		IReadOnlyList<ICadSymbolTerminal> GetTerminals(Guid symbolLinkId);
+
+		/// <summary>Reads the terminal catalog belonging to an engineering object.</summary>
+		IReadOnlyList<IEngineeringObjectTerminal> GetObjectTerminals(Guid engineeringObjectId);
+
+		/// <summary>Atomically replaces the complete terminal list of an active symbol.</summary>
+		(ICadSymbolLink? Value, ValidationResult Validation) ReplaceTerminals(
+			ICadSymbolLink symbol, IReadOnlyList<(string Tag, string Designation)> terminals);
+
+		/// <summary>Creates the link and its complete terminal list atomically.</summary>
+		(ICadSymbolLink? Value, ValidationResult Validation) CreateWithTerminals(
+			Guid documentId, Guid sheetId, long blockHandle, Guid engineeringObjectId,
+			IReadOnlyList<(string Tag, string Designation)> terminals);
+
+		/// <summary>
+		/// Creates a reference symbol and its attribute snapshot in one commit.
+		/// </summary>
+		(ICadSymbolLink? Value, ValidationResult Validation) CreateReferenceContact(
+			Guid documentId,
+			Guid sheetId,
+			long blockHandle,
+			Guid engineeringObjectId,
+			string blockName,
+			string designation,
+			string placement,
+			string referenceText,
+			IReadOnlyList<(string Tag, string Designation)> slots);
+
+		/// <summary>
+		/// Replaces reference attributes and reactivates the link atomically.
+		/// </summary>
+		(ICadSymbolLink? Value, ValidationResult Validation) ReplaceReferenceContact(
+			ICadSymbolLink symbol,
+			string blockName,
+			string designation,
+			string placement,
+			string referenceText,
+			IReadOnlyList<(string Tag, string Designation)> slots);
+
+		/// <summary>
+		/// Reads the reference snapshot, including snapshots for detached links.
+		/// </summary>
+		ICadReferenceContact? GetReferenceContact(Guid symbolLinkId);
+
+		/// <summary>
+		/// Reads reference slots using the CAD symbol link identifier.
+		/// </summary>
+		IReadOnlyList<ICadReferenceContactTerminal> GetReferenceTerminals(Guid symbolLinkId);
 	}
 }
+

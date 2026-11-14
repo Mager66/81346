@@ -1,5 +1,5 @@
 ﻿using DevExpress.Xpo;
-using ELPROCAD.CAD.Data.Analysis;
+using ELPROCAD.CAD.Data.Analysis.Import;
 using ELPROCAD.CAD.Data.CRUD;
 using ELPROCAD.CAD.Data.CRUD.Analisys;
 using ELPROCAD.CAD.Data.CRUD.Classification;

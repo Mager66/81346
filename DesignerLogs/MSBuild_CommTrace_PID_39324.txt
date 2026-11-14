@@ -1,0 +1,14 @@
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756209703 +    1,5075ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756315268 +   10,5565ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756325270 +    1,0002ms: Building handshake for node type X64, Administrator, (version 1): options 16777252.
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756365298 +    4,0028ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756375294 +    0,9996ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756440612 +    6,5318ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756460686 +    2,0074ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 4) 639301837756480656 +     1,997ms: Entering read loop.
+ (TID 1) 639301837823844014 +  6736,336ms: Shutting down with reason: BuildComplete, and exception: .
+OutOfProc Endpoint Packet Pump (TID 4) 639301837823924081 +    8,0067ms: Parent disconnected abruptly.
+OutOfProc Endpoint Packet Pump (TID 4) 639301837823964308 +    4,0227ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 4) 639301837823994270 +    2,9962ms: Ending read loop
+ (TID 1) 639301837824014256 +    1,9986ms: Changing link status from Failed to Inactive
+ (TID 1) 639301837824301769 +   28,7513ms: Shut down complete.

@@ -23,6 +23,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 		private readonly JunctionReader junctionReader;
 		private readonly JunctionMatcher junctionMatcher;
 		private readonly ConnectionNetworkBuilder networkBuilder;
+		private readonly double gridTolerance;
 
 		public SheetAnalysisService(BlockDefinitionLookup definitionLookup,	double distanceTolerance, double angularToleranceRadians)
 		{
@@ -42,6 +43,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 			junctionReader = new JunctionReader();
 			junctionMatcher = new JunctionMatcher(distanceTolerance);
 			networkBuilder = new ConnectionNetworkBuilder();
+			this.gridTolerance = distanceTolerance;
 		}
 
 		public SheetAnalysisData Analyze(AcDb.Transaction transaction, AcDb.ObjectId spaceId, TitleBlockInfo titleBlock)
@@ -57,7 +59,9 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 				spaceId,
 				titleBlock.SheetLayer);
 
-			var blocks = ReadBlocks(transaction, entities);
+			var grid = new SheetGridReader().Read(transaction, spaceId, titleBlock.SheetLayer, gridTolerance, out var rulerRoots);
+
+			var blocks = ReadBlocks(transaction, entities, rulerRoots);
 			var polylines = ReadPolylines(transaction, entities);
 
 			var junctions = junctionReader.Read(transaction, blocks);
@@ -93,15 +97,20 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 				titleBlock,
 				blocks,
 				polylines,
-				networks);
+				networks)
+			{ Grid = grid };
 		}
 
-		private List<CadBlock> ReadBlocks(AcDb.Transaction transaction, SheetEntities entities)
+		private List<CadBlock> ReadBlocks(AcDb.Transaction transaction, SheetEntities entities, ISet<AcDb.ObjectId> rulerRoots)
 		{
 			var blocks = new List<CadBlock>();
 
 			foreach (var blockId in entities.BlockIds)
 			{
+				// Ruler containers are not engineering symbols.
+				if (rulerRoots.Contains(blockId))
+					continue;
+
 				var block = blockReader.Read(transaction, blockId);
 
 				if (!string.Equals(

@@ -18,5 +18,15 @@
 		/// Gets the sheet on which the CAD symbol is presented.
 		/// </summary>
 		Guid SheetId { get; }
+
+		/// <summary>
+		/// Gets the time when the symbol was disconnected from its presentation.
+		/// </summary>
+		DateTime? DetachedAtUtc { get; }
+
+		/// <summary>
+		/// Gets whether the symbol link is currently disconnected.
+		/// </summary>
+		bool IsDetached { get; }
 	}
 }

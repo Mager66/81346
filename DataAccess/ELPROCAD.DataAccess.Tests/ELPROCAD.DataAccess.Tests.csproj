@@ -24,7 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe"  Version="6.1.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,7 +44,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.Data\ELPROCAD.CAD.Data.csproj" />
     <ProjectReference Include="..\ELPROCAD.DataAccess\ELPROCAD.DataAccess.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\CAD\ELPROCAD.CAD.Library\Analysis\Sheets\SheetGridAxis.cs"
+             Link="SourceUnderTest\SheetGridAxis.cs" />
+    <Compile Include="..\..\CAD\ELPROCAD.CAD.Library\Analysis\Sheets\SheetGridLabels.cs"
+         Link="SourceUnderTest\SheetGridLabels.cs" />
+  </ItemGroup>
+  
 </Project>

@@ -26,22 +26,26 @@
 		</COMReference>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1"/>
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.Data\ELPROCAD.CAD.Data.csproj"/>
-		<ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.TestWPF\ELPROCAD.CAD.TestWPF.csproj"/>
-		<ProjectReference Include="..\ELPROCAD.CAD.Library\ELPROCAD.CAD.Library.csproj"/>
+		<ProjectReference Include="..\..\OnlyForTest\ELPROCAD.CAD.Data\ELPROCAD.CAD.Data.csproj" />
+		<ProjectReference Include="..\..\UI\ELPROCAD.ProjectExplorer\ELPROCAD.ProjectExplorer.csproj" />
+		<ProjectReference Include="..\ELPROCAD.CAD.Library\ELPROCAD.CAD.Library.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="BrxMgd">
 			<HintPath>..\..\..\..\..\Program Files\Bricsys\BricsCAD V23 en_US\BrxMgd.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
-		<PackageReference Include="DevExpress.Xpo" Version="23.2.3"/>
+		<PackageReference Include="DevExpress.Xpo" Version="23.2.3" />
 		<Reference Include="TD_Mgd">
 			<HintPath>..\..\..\..\..\Program Files\Bricsys\BricsCAD V23 en_US\TD_Mgd.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Diagnostics\" />
+	</ItemGroup>
+  
 </Project>

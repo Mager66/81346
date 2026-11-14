@@ -1,9 +1,8 @@
-﻿
+﻿using ELPROCAD.CAD.Library.Analysis.Terminals;
 #if ARX_APP
 using AcDb = Autodesk.AutoCAD.DatabaseServices;
 using AcGe = Autodesk.AutoCAD.Geometry;
 #elif BRX_APP || PROGECAD_APP
-using ELPROCAD.CAD.Library.Analysis.Terminals;
 using AcDb = Teigha.DatabaseServices;
 using AcGe = Teigha.Geometry;
 #endif

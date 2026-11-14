@@ -4,7 +4,7 @@
   <LangVersion>12.0</LangVersion>
   <ImplicitUsings>enable</ImplicitUsings>
   <Nullable>enable</Nullable>
-  <Configurations>Debug;Release;BRX_APP;BRX_23</Configurations>
+  <Configurations>Debug;Release;BRX_APP;BRX_23;ARX25</Configurations>
   <Platforms>AnyCPU;x64</Platforms>
 </PropertyGroup>
 	
@@ -12,6 +12,10 @@
   <TargetFrameworks>net472</TargetFrameworks>
   <DefineConstants>$(DefineConstants);BRX_APP</DefineConstants>
 </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'ARX25'">
+    <TargetFrameworks>net8.0</TargetFrameworks>
+  </PropertyGroup>
 	
 	<ItemGroup>
 		<PackageReference Include="System.Text.Json" Version="10.0.13" />

@@ -1,4 +1,5 @@
-﻿using ELPROCAD.DataAccess;
+﻿using ELPROCAD.CAD.Data.Analysis.Import;
+using ELPROCAD.DataAccess;
 using ELPROCAD.DataAccess.Repositories.MDBX;
 using ELPROCAD.DataAccess.Repositories.PDSX;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,8 @@ namespace ELPROCAD.CAD.Data.Analysis
 
 			services.AddScoped<AnalysisBlockImporter>();
 			services.AddScoped<LocationTreeReader>();
+			services.AddScoped<CadSymbolLinkReconciler>(provider =>
+			new CadSymbolLinkReconciler(provider.GetRequiredService<IMdbxRepository>()));
 
 			return services;
 		}

@@ -32,7 +32,7 @@ namespace ELPROCAD.CAD.Library.CadEntity
 		/// Adds an engineering object link.
 		/// An existing link to a different object is never overwritten.
 		/// </summary>
-		public static void Write(AcDb.Database database, AcDb.ObjectId blockId,	Guid objectId)
+		public static void Write(AcDb.Database database, AcDb.ObjectId blockId, Guid objectId)
 		{
 			if (database == null)
 				throw new ArgumentNullException(nameof(database));
@@ -47,8 +47,8 @@ namespace ELPROCAD.CAD.Library.CadEntity
 
 			if (existingId.HasValue)
 			{
-				if (existingId.Value != objectId)				
-					throw new InvalidOperationException($"Block {blockId.Handle} is already linked to another engineering object.");				
+				if (existingId.Value != objectId)
+					throw new InvalidOperationException($"Block {blockId.Handle} is already linked to another engineering object.");
 
 				return;
 			}
@@ -134,10 +134,27 @@ namespace ELPROCAD.CAD.Library.CadEntity
 			transaction.Commit();
 		}
 
+		/// <summary>Removes only this application's XData when the inherited object identifier still matches.</summary>
+		public static void ClearExpected(AcDb.Database database, AcDb.ObjectId blockId, Guid expectedObjectId)
+		{
+			if (database == null) throw new ArgumentNullException(nameof(database));
+			if (expectedObjectId == Guid.Empty)
+				throw new ArgumentException("An expected object identifier is required.", nameof(expectedObjectId));
+			using var transaction = database.TransactionManager.StartTransaction();
+			var block = GetBlock(transaction, blockId);
+			if (Read(block) != expectedObjectId)
+				throw new InvalidOperationException("The symbol's object link changed during analysis.");
+			block.UpgradeOpen();
+			// An application-name-only buffer removes this application's section, preserving other XData.
+			using var data = new AcDb.ResultBuffer(new AcDb.TypedValue(
+				(int)AcDb.DxfCode.ExtendedDataRegAppName, ApplicationName));
+			block.XData = data;
+			transaction.Commit();
+		}
 		private static AcDb.BlockReference GetBlock(AcDb.Transaction transaction, AcDb.ObjectId blockId)
 		{
-			if (transaction.GetObject(blockId, AcDb.OpenMode.ForRead) is not AcDb.BlockReference block)			
-				throw new ArgumentException("The identifier must reference a block.", nameof(blockId));			
+			if (transaction.GetObject(blockId, AcDb.OpenMode.ForRead) is not AcDb.BlockReference block)
+				throw new ArgumentException("The identifier must reference a block.", nameof(blockId));
 
 			return block;
 		}

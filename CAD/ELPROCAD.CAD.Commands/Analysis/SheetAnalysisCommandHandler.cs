@@ -1,7 +1,12 @@
 ﻿using ELPROCAD.CAD.Data.Analysis;
 using ELPROCAD.CAD.Library.Analysis.Sheets;
+using ELPROCAD.DataAccess.Repositories.PDSX;
+using ELPROCAD.DataAccess.Repositories.MDBX;
+using ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.View;
 using Microsoft.Extensions.DependencyInjection;
 using Teigha.Geometry;
+using ELPROCAD.CAD.Data.Analysis.Import;
+
 
 
 #if BRX_APP
@@ -18,6 +23,7 @@ namespace ELPROCAD.CAD.Commands.Analysis
 		private const double AngularToleranceRadians = Math.PI / 180.0;
 
 		private readonly IServiceProvider _serviceProvider;
+		private static ProjectExplorerWindow? _projectExplorer;
 
 		public SheetAnalysisCommandHandler(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
@@ -46,7 +52,18 @@ namespace ELPROCAD.CAD.Commands.Analysis
 					DistanceTolerance,
 					AngularToleranceRadians);
 
-				using(var scope = _serviceProvider.CreateScope())
+				foreach (var block in result.Blocks)
+				{
+					var coordinate = result.GetGridCoordinate(block.Position);
+
+					ed.WriteMessage(
+						$"\nBlock {block.ObjectId.Handle}: " +
+						(coordinate.HasValue
+							? $"grid ({coordinate.Value.X}.{coordinate.Value.Y})"
+							: "no grid coordinate"));
+				}
+
+				using (var scope = _serviceProvider.CreateScope())
 				{
 					var importer = scope.ServiceProvider.GetRequiredService<AnalysisBlockImporter>();
 					var importResult = importer.Import(doc, result);
@@ -74,6 +91,10 @@ namespace ELPROCAD.CAD.Commands.Analysis
 						ed.WriteMessage(
 							$"\nBlock {error.BlockId.Handle}: {error.Message}");
 					}
+
+					ShowProjectExplorer(
+						scope.ServiceProvider.GetRequiredService<IPdsxRepository>(),
+						scope.ServiceProvider.GetRequiredService<IMdbxRepository>());
 				}
 
 				ed.WriteMessage(
@@ -100,6 +121,38 @@ namespace ELPROCAD.CAD.Commands.Analysis
 			{
 				ed.WriteMessage($"\nAnalysen kunde inte slutföras: {exception.Message}");
 			}
+		}
+
+		/// <summary>
+		/// Opens the explorer or refreshes the existing window after analysis.
+		/// </summary>
+		private static void ShowProjectExplorer(IPdsxRepository pdsx, IMdbxRepository mdbx)
+		{
+			var projects = pdsx.Project.GetAll();
+
+			if (projects.Count != 1)
+			{
+				throw new InvalidOperationException(
+					"The analysis database must contain exactly one project.");
+			}
+
+			if (_projectExplorer != null)
+			{
+				_projectExplorer.Load(mdbx, projects[0].Id);
+				_projectExplorer.Activate();
+				return;
+			}
+
+			var window = new ProjectExplorerWindow();
+			window.Load(mdbx, projects[0].Id);
+
+			window.Closed += (_, _) => _projectExplorer = null;
+
+			AcAp.Application.ShowModelessWindow(
+				AcAp.Application.MainWindow.Handle,
+				window);
+
+			_projectExplorer = window;
 		}
 	}
 }

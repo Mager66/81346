@@ -27,4 +27,7 @@
   <ItemGroup>
     <PackageReference Include="DevExpress.Xpo" Version="23.2.3" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Analysis\Identity\" />
+  </ItemGroup>
 </Project>

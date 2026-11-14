@@ -122,7 +122,7 @@ namespace ELPROCAD.DataAccess.Changes.Locations
 				var parentId = targetParent?.Id;
 
 				var candidate = locations.SingleOrDefault(location =>
-					location.Depth == depth &&
+					location.ParentId == parentId &&
 					string.Equals(
 						location.Designation,
 						designation,
@@ -135,15 +135,7 @@ namespace ELPROCAD.DataAccess.Changes.Locations
 						return (null, ValidationResults.Failure(
 							nameof(source.ParentId),
 							"A location cannot be moved beneath itself or a descendant."));
-					}
-
-					if (candidate.ParentId != parentId)
-					{
-						return (null, ValidationResults.Failure(
-							nameof(source.ParentId),
-							$"Designation '{designation}' already exists " +
-							$"at depth {depth} beneath another parent."));
-					}
+					}					
 
 					targetParent = candidate;
 					continue;
@@ -189,18 +181,19 @@ namespace ELPROCAD.DataAccess.Changes.Locations
 			// Validate the complete final structure, including prepared parents.
 			var finalState = locations.Select(location => new
 			{
-				Depth = finalDepths.TryGetValue(location.Id, out var depth)
-					? depth
-					: location.Depth,
+				// Validate sibling uniqueness using the final parent relationship.
+				ParentId = location.Id == existing.Id
+				? targetParent?.Id
+				: location.ParentId,
 
 				Designation = location.Id == existing.Id
 					? plan.Designation
 					: location.Designation
 			});
 
-			foreach (var level in finalState.GroupBy(location => location.Depth))
+			foreach (var siblings in finalState.GroupBy(location => location.ParentId))
 			{
-				var duplicate = level
+				var duplicate = siblings
 					.GroupBy(
 						location => location.Designation,
 						StringComparer.OrdinalIgnoreCase)
@@ -211,7 +204,7 @@ namespace ELPROCAD.DataAccess.Changes.Locations
 					return (null, ValidationResults.Failure(
 						nameof(source.Designation),
 						$"Designation '{duplicate.Key}' would occur more than once " +
-						$"at depth {level.Key}."));
+						"under the same parent."));
 				}
 			}
 

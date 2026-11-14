@@ -56,7 +56,7 @@ namespace ELPROCAD.DataAccess.CRUD
 			{
 				return (null, ValidationResults.Failure(
 					nameof(location.Designation),
-					"The move would create a duplicate designation at the same depth. " +
+					"The move would create a duplicate designation under the target parent. " +
 					"No changes were saved."));
 			}
 		}
@@ -148,10 +148,13 @@ namespace ELPROCAD.DataAccess.CRUD
 
 			foreach (var item in subtree)
 			{
-				var finalDepth = finalDepths[item.Id];
+				// Only the subtree root receives a different parent.
+				var finalParentId = item.Id == existing.Id
+					? parentId
+					: item.ParentId;
 
 				var duplicate = outsideSubtree.Any(candidate =>
-					candidate.Depth == finalDepth &&
+					candidate.ParentId == finalParentId &&
 					string.Equals(
 						candidate.Designation,
 						item.Designation,
@@ -162,7 +165,7 @@ namespace ELPROCAD.DataAccess.CRUD
 					return (null, ValidationResults.Failure(
 						nameof(location.Designation),
 						$"Designation '{item.Designation}' already exists " +
-						$"at depth {finalDepth}."));
+						"under the target parent."));
 				}
 			}
 

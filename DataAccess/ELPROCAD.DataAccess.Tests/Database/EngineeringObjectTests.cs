@@ -89,7 +89,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.NotNull(result.Value);
 			Assert.Equal(input.Id, result.Value!.Id);
 			Assert.NotNull(result.Value.LoadedVersion);
-			Assert.Null(result.Value.SheetId);
+			Assert.Empty(_repository.CadSymbolLink.GetByObjectId(result.Value.Id));
 
 			var stored = _repository.EngineeringObject.GetById(input.Id);
 
@@ -166,61 +166,6 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Null(_repository.EngineeringObject.GetById(input.Id));
 		}
 
-		[Fact(DisplayName =	"An engineering object can reference a sheet in its project and prevents sheet deletion")]
-		public void Create_WithSheet_PreservesReferences()
-		{
-			var location = AddLocation("AS1");
-			var format = _pdsx.FileFormat.GetByExtension(".dwg")!;
-
-			var document = _repository.Document.Create(
-				_projectId,
-				format.Id,
-				"Drawing01",
-				Path.Combine(_directory, "Drawing01.dwg"));
-
-			Assert.True(document.Validation.IsValid);
-
-			var sheet = _repository.Sheet.Create(document.Value!.Id, "001");
-
-			Assert.True(sheet.Validation.IsValid);
-
-			var input = _repository.EngineeringObject.New(_projectId);
-			input.LocationId = location.Id;
-			input.SheetId = sheet.Value!.Id;
-
-			var result = _repository.EngineeringObject.Create(input);
-
-			Assert.True(result.Validation.IsValid);
-
-			Assert.Equal(
-				input.Id,
-				Assert.Single(
-					_repository.EngineeringObject.GetBySheetId(sheet.Value.Id)).Id);
-
-			var currentSheet = _repository.Sheet.GetById(sheet.Value.Id)!;
-
-			Assert.False(_repository.Sheet.Delete(currentSheet).IsValid);
-		}
-
-		[Fact(DisplayName =	"A failed sheet reference leaves the object and dependency versions unchanged")]
-		public void Create_UnknownSheet_DoesNotPersistChanges()
-		{
-			var location = AddLocation("AS1");
-
-			var input = _repository.EngineeringObject.New(_projectId);
-			input.LocationId = location.Id;
-			input.SheetId = Guid.NewGuid();
-
-			var result = _repository.EngineeringObject.Create(input);
-
-			Assert.Null(result.Value);
-			Assert.False(result.Validation.IsValid);
-			Assert.Null(_repository.EngineeringObject.GetById(input.Id));
-
-			Assert.Equal(
-				location.LoadedVersion,
-				_repository.Location.GetById(location.Id)!.LoadedVersion);
-		}
 
 		#region Update
 
@@ -361,53 +306,6 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Equal(thirdLocation.Id, outdated.LocationId);
 		}
 
-		[Fact(DisplayName =	"An object can be attached to and detached from a sheet while retaining its aspect")]
-		public void Update_SheetAssociation_CanBeAssignedAndCleared()
-		{
-			var location = AddLocation("AS1");
-			var entity = AddObject(location.Id);
-			var format = _pdsx.FileFormat.GetByExtension(".dwg")!;
-
-			var document = _repository.Document.Create(
-				_projectId,
-				format.Id,
-				"Drawing01",
-				Path.Combine(_directory, "Drawing01.dwg"));
-
-			Assert.True(document.Validation.IsValid);
-
-			var sheet = _repository.Sheet.Create(document.Value!.Id, "001");
-
-			Assert.True(sheet.Validation.IsValid);
-
-			entity.SheetId = sheet.Value!.Id;
-
-			var attached = _repository.EngineeringObject.Update(entity);
-
-			Assert.True(attached.Validation.IsValid);
-
-			Assert.Equal(
-				entity.Id,
-				Assert.Single(
-					_repository.EngineeringObject.GetBySheetId(sheet.Value.Id)).Id);
-
-			var current = attached.Value!;
-			current.SheetId = null;
-
-			var detached = _repository.EngineeringObject.Update(current);
-
-			Assert.True(detached.Validation.IsValid);
-			Assert.Null(detached.Value!.SheetId);
-			Assert.Equal(location.Id, detached.Value.LocationId);
-
-			Assert.Empty(
-				_repository.EngineeringObject.GetBySheetId(sheet.Value.Id));
-
-			var unusedSheet = _repository.Sheet.GetById(sheet.Value.Id)!;
-
-			Assert.True(_repository.Sheet.Delete(unusedSheet).IsValid);
-		}
-
 		#endregion Update
 
 		#region Delete
@@ -436,49 +334,6 @@ namespace ELPROCAD.DataAccess.Tests.Database
 					_repository.EngineeringObject.GetByLocationId(location.Id)).Id);
 		}
 
-		[Fact(DisplayName =	"Deleting an object preserves its sheet and document")]
-		public void Delete_Object_PreservesSheetAndDocument()
-		{
-			var location = AddLocation("AS1");
-			var format = _pdsx.FileFormat.GetByExtension(".dwg")!;
-
-			var document = _repository.Document.Create(
-				_projectId,
-				format.Id,
-				"Drawing01",
-				Path.Combine(_directory, "Drawing01.dwg"));
-
-			Assert.True(document.Validation.IsValid);
-
-			var sheet = _repository.Sheet.Create(document.Value!.Id, "001");
-
-			Assert.True(sheet.Validation.IsValid);
-
-			var input = _repository.EngineeringObject.New(_projectId);
-			input.LocationId = location.Id;
-			input.SheetId = sheet.Value!.Id;
-
-			var created = _repository.EngineeringObject.Create(input);
-
-			Assert.True(created.Validation.IsValid);
-
-			var deleted = _repository.EngineeringObject.Delete(created.Value!);
-
-			Assert.True(deleted.IsValid);
-			Assert.NotNull(_repository.Sheet.GetById(sheet.Value.Id));
-			Assert.NotNull(_repository.Document.GetById(document.Value.Id));
-			var stored = _repository.EngineeringObject.GetById(input.Id);
-
-			Assert.NotNull(stored);
-			Assert.True(stored!.IsMarkedForDeletion);
-			Assert.Equal(sheet.Value.Id, stored.SheetId);
-			Assert.Equal(location.Id, stored.LocationId);
-
-			Assert.Equal(
-				input.Id,
-				Assert.Single(
-					_repository.EngineeringObject.GetBySheetId(sheet.Value.Id)).Id);
-		}
 
 		[Fact(DisplayName =	"Deleting a representing object preserves the representation")]
 		public void Delete_RepresentingObject_PreservesRepresentation()

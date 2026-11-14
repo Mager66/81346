@@ -7,6 +7,8 @@ using ELPROCAD.DataAccess.Database.Migrations;
 using ELPROCAD.DataAccess.Models.MDBX.Aspects;
 using ELPROCAD.DataAccess.Models.MDBX.Documents;
 using ELPROCAD.DataAccess.Models.MDBX.Objects;
+using ELPROCAD.DataAccess.Models.MDBX.References;
+using ELPROCAD.DataAccess.Models.MDBX.Terminals;
 using ELPROCAD.DataAccess.Models.PDSX.Classification;
 using ELPROCAD.DataAccess.Models.PDSX.Documents;
 using ELPROCAD.DataAccess.Models.PDSX.ProjectData;
@@ -36,7 +38,7 @@ namespace ELPROCAD.DataAccess
 				typeof(SubClass),
 				typeof(FileFormat),
 				typeof(OpeningProgram),
-				typeof(FileFormatProgram)
+				typeof(FileFormatProgram)				
 			},
 			PdsxDefaults.Initialize);
 
@@ -71,7 +73,11 @@ namespace ELPROCAD.DataAccess
 					typeof(DocumentProperties),
 					typeof(CadDocumentCustomProperty),
 					typeof(EngineeringObject),
+					typeof(EngineeringObjectTerminal),
 					typeof(CadSymbolLink),
+					typeof(CadSymbolTerminal),
+					typeof(CadReferenceContact),
+					typeof(CadReferenceContactTerminal),
 					typeof(PowerFunction),
 					typeof(ControlFunction),
 					typeof(TopographicStructure),
@@ -102,7 +108,7 @@ namespace ELPROCAD.DataAccess
 				new CadDocumentCustomPropertyRepository(read),
 				new LocationRepository(read, create, update, delete, new MoveLocation(database), new LocationChangeWriter(database)),
 				new EngineeringObjectRepository(read, create, update),
-				new CadSymbolLinkRepository(read, create, delete));
+				new CadSymbolLinkRepository(read, create, update));
 		}
 
 		/// <summary>

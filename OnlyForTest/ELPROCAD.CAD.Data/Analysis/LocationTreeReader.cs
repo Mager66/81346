@@ -1,11 +1,5 @@
-﻿using DevExpress.Utils.Filtering.Internal;
-using ELPROCAD.DataAccess.Repositories.MDBX;
+﻿using ELPROCAD.DataAccess.Repositories.MDBX;
 using ELPROCAD.DataAccess.Repositories.PDSX;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ELPROCAD.CAD.Data.Analysis
 {
@@ -94,8 +88,10 @@ namespace ELPROCAD.CAD.Data.Analysis
 				.ToDictionary(location => location.Id);
 
 			var objects = _mdbx.EngineeringObject
-				.GetByProjectId(projectId);
+				.GetByProjectId(projectId)
+				.ToDictionary(entity=>entity.Id);
 
+			var linkedObjectIds = new HashSet<Guid>();
 			var lines = new List<string>();
 
 			string GetLocationPath(Guid locationId)
@@ -132,38 +128,60 @@ namespace ELPROCAD.CAD.Data.Analysis
 
 				foreach (var sheet in _mdbx.Sheet.GetByDocumentId(document.Id))
 				{
-					var sheetObjects = objects
-						.Where(entity => entity.SheetId == sheet.Id)
-						.OrderBy(entity => entity.Id)
+					var links=_mdbx.CadSymbolLink.GetBySheetId(sheet.Id);
+
+					var objectGroups = links
+						.GroupBy(link => link.EngineeringObjectId)
+						.OrderBy(group => group.Key)
 						.ToList();
 
 					lines.Add(
 						$"  Sheet: {sheet.SheetNo} [{sheet.Id}], " +
-						$"objects: {sheetObjects.Count}");
+						$"objects: {objectGroups.Count}, symbols:{links.Count}");
 
-					foreach (var entity in sheetObjects)
+					foreach(var group in objectGroups)
 					{
+						if(!objects.TryGetValue(group.Key, out var entity))
+						{
+							lines.Add($"    ERROR: Linked object '{group.Key}' was not found in the project.");
+
+							continue;
+						}
+
+						linkedObjectIds.Add(entity.Id);
+
 						var locationPath = entity.LocationId.HasValue
 							? GetLocationPath(entity.LocationId.Value)
 							: "(none)";
 
-						lines.Add(
-							$"    Object: {entity.Id}, location: {locationPath}");
+						var status = entity.IsMarkedForDeletion
+							? " [marked for deletion]"
+							: string.Empty;
 
-						foreach (var represented in locations.Values
-							.Where(location =>
-								location.RepresentedByObjectId == entity.Id))
+						lines.Add($"    Object: {entity.Id}, location: {locationPath}{status}");
+
+						foreach(var link in group.OrderBy(link=>link.BlockHandle))
 						{
-							lines.Add(
-								$"      Represents: {GetLocationPath(represented.Id)}");
+							if(link.DocumentId != document.Id)
+								lines.Add($"      ERROR: Symbol link '{link.Id}' references another document.");
+
+							lines.Add($"      Symbol: {link.BlockHandle:X}, link: {link.Id}");
+						}
+
+						foreach(var represented in locations.Values.Where(location=>location.RepresentedByObjectId== entity.Id)
+							.OrderBy(location=>location.Id))
+						{
+							lines.Add($"      Represents: {GetLocationPath(represented.Id)}");
 						}
 					}
+
+					
 				}
 			}
 
 			lines.Add(
-				$"Objects without a sheet: " +
-				$"{objects.Count(entity => !entity.SheetId.HasValue)}");
+				$"Objects without a CAD symbol on a project sheet: " +
+				$"{objects.Keys.Count(id => !linkedObjectIds.Contains(id))}");
 
 			return lines.AsReadOnly();
 		}

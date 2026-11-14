@@ -112,14 +112,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Aspects
 			var duplicate = new XPQuery<Location>(unitOfWork)
 				.Any(item =>
 					item.ProjectId == entity.ProjectId &&
-					item.Depth == entity.Depth &&
+					item.ParentId == entity.ParentId &&
 					item.Designation == entity.Designation);
 
 			if (duplicate)
 			{
 				return ValidationResults.Failure(
 					nameof(ILocation.Designation),
-					"The designation is already used at this depth in the project's location structure.");
+					"The designation is already used under this parent in the project.");
 			}
 
 			if (parent != null)
@@ -177,16 +177,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Aspects
 					var duplicate = new XPQuery<Location>(unitOfWork)
 					.Any(item =>
 						item.ProjectId == existing.ProjectId &&
-						item.Depth == existing.Depth &&
+						item.ParentId == existing.ParentId &&
 						item.Designation == input.Designation &&
 						item.Id != existing.Id);
 					
 					return duplicate
 					? ValidationResults.Failure(
 						nameof(ILocation.Designation),
-						"The designation is already used at this depth in the project's location structure.")
+						"The designation is already used under this parent in the project.")
 					: new ValidationResult();
-		});
+				});
 
 			return (result.Value, result.Validation);
 		}

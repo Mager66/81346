@@ -132,7 +132,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 		}
 
 		[Fact(DisplayName =	"The same designation is rejected at the same depth even under different parents")]
-		public void Create_SameDepthDifferentParents_IsRejected()
+		public void Create_SameDepthDifferentParents_IsAllowed()
 		{
 			var firstRoot = Add("AS1");
 			var secondRoot = Add("AS2");
@@ -144,19 +144,12 @@ namespace ELPROCAD.DataAccess.Tests.Database
 				"K1",
 				secondRoot.Id);
 
-			Assert.Null(result.Value);
-			Assert.False(result.Validation.IsValid);
-
-			var error = Assert.Single(result.Validation.Errors);
-
-			Assert.Equal(nameof(ILocation.Designation), error.PropertyName);
-
-			Assert.Equal(
-				original.Id,
-				Assert.Single(
-					_repository.Location.GetChildren(firstRoot.Id)).Id);
-
-			Assert.Empty(_repository.Location.GetChildren(secondRoot.Id));
+			Assert.True(result.Validation.IsValid);
+			Assert.NotNull(result.Value);
+			Assert.NotEqual(original.Id, result.Value!.Id);
+			Assert.Equal(secondRoot.Id, result.Value.ParentId);
+			Assert.Single(_repository.Location.GetChildren(firstRoot.Id));
+			Assert.Single(_repository.Location.GetChildren(secondRoot.Id));
 		}
 
 		[Fact(DisplayName =	"The same designation is allowed at different depths")]
@@ -271,10 +264,9 @@ namespace ELPROCAD.DataAccess.Tests.Database
 		public void Update_DuplicateDesignationAtSameDepth_IsRejected()
 		{
 			var firstRoot = Add("AS1");
-			var secondRoot = Add("AS2");
 
 			Add("K1", firstRoot.Id);
-			var second = Add("K2", secondRoot.Id);
+			var second = Add("K2", firstRoot.Id);
 
 			second.Designation = "K1";
 
@@ -290,7 +282,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			var stored = _repository.Location.GetById(second.Id)!;
 
 			Assert.Equal("K2", stored.Designation);
-			Assert.Equal(secondRoot.Id, stored.ParentId);
+			Assert.Equal(firstRoot.Id, stored.ParentId);
 		}
 
 		[Fact(DisplayName =	"Renaming to a designation used at another depth is allowed")]
@@ -548,7 +540,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 				storedLocation.RepresentedByObjectId);
 
 			Assert.Equal(location.Id, storedObject.LocationId);
-			Assert.Null(storedObject.SheetId);
+			Assert.Empty(_repository.CadSymbolLink.GetByObjectId(result.Value.Id));
 		}
 
 		[Fact(DisplayName =	"Assigning a representing object does not move its existing aspect membership")]

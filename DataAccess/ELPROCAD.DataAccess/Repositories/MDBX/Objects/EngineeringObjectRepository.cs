@@ -45,7 +45,22 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 
 		public IReadOnlyList<IEngineeringObject> GetBySheetId(Guid sheetId)
 		{
-			var objectIds = _read.GetAll<CadSymbolLink>(link => link.SheetId == sheetId)
+			var sheetLinks = _read.GetAll<CadSymbolLink>(
+				link => link.SheetId == sheetId);
+
+			var activeLinks = sheetLinks
+				.Where(link => link.DetachedAtUtc == null)
+				.ToArray();
+
+			var objectIdss = activeLinks
+				.Select(link => link.EngineeringObjectId)
+				.Distinct()
+				.ToArray();
+
+			var objectIds = _read.GetAll<CadSymbolLink>(
+				link =>
+				link.SheetId == sheetId &&
+				link.DetachedAtUtc == null)
 				.Select(link => link.EngineeringObjectId)
 				.Distinct()
 				.ToArray();

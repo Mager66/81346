@@ -1,0 +1,98 @@
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579714032 +         0ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579724120 +    1,0088ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579759301 +    3,5181ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579769289 +    0,9988ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579789567 +    2,0278ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579898296 +   10,8729ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579918309 +    2,0013ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 4) 639301837579928339 +     1,003ms: Entering read loop.
+ (TID 1) 639301837843739919 +  26381,16ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 4) 639301837843769908 +    2,9989ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 4) 639301837843779921 +    1,0013ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 4) 639301837843779921 +         0ms: Ending read loop
+ (TID 1) 639301837843815084 +    3,5163ms: Changing link status from Failed to Inactive
+ (TID 1) 639301837844011285 +   19,6201ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 20) 639301837844031313 +    2,0028ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846326442 +  229,5129ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846336451 +    1,0009ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846346633 +    1,0182ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846346633 +         0ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846464196 +   11,7563ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846474290 +    1,0094ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 20) 639301837846483892 +    0,9602ms: Entering read loop.
+ (TID 1) 639301837857393346 +  1090,945ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 20) 639301837857403412 +    1,0066ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 20) 639301837857413414 +    1,0002ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 20) 639301837857413414 +         0ms: Ending read loop
+ (TID 1) 639301837857423401 +    0,9987ms: Changing link status from Failed to Inactive
+ (TID 1) 639301837857533412 +   11,0011ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 18) 639301837857548462 +     1,505ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858431266 +   88,2804ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858431266 +         0ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858441290 +    1,0024ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858451278 +    0,9988ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858532693 +    8,1415ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858542729 +    1,0036ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 18) 639301837858542729 +         0ms: Entering read loop.
+ (TID 1) 639301837868156038 +  961,3309ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 18) 639301837868171082 +    1,5044ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 18) 639301837868171082 +         0ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 18) 639301837868171082 +         0ms: Ending read loop
+ (TID 1) 639301837868181136 +    1,0054ms: Changing link status from Failed to Inactive
+ (TID 1) 639301837868435005 +   25,3869ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 20) 639301837868435005 +         0ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 20) 639301844323918237 +  645548,3ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 20) 639301844323928275 +    1,0038ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 20) 639301844323928275 +         0ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 20) 639301844323939493 +    1,1218ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 20) 639301844323990933 +     5,144ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 20) 639301844324010878 +    1,9945ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 20) 639301844324010878 +         0ms: Entering read loop.
+ (TID 1) 639301844331037751 +  702,6873ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 20) 639301844331057651 +      1,99ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 20) 639301844331057651 +         0ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 20) 639301844331057651 +         0ms: Ending read loop
+ (TID 1) 639301844331067883 +    1,0232ms: Changing link status from Failed to Inactive
+ (TID 1) 639301844331363908 +   29,6025ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331374281 +    1,0373ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331443992 +    6,9711ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331454014 +    1,0022ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331464072 +    1,0058ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331474025 +    0,9953ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331524086 +    5,0061ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331534095 +    1,0009ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 30) 639301844331544094 +    0,9999ms: Entering read loop.
+ (TID 1) 639301844338293405 +  674,9311ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 30) 639301844338313195 +     1,979ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 30) 639301844338323185 +     0,999ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 30) 639301844338323185 +         0ms: Ending read loop
+ (TID 1) 639301844338333193 +    1,0008ms: Changing link status from Failed to Inactive
+ (TID 1) 639301844338554018 +   22,0825ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 20) 639301844338564129 +    1,0111ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408547025 +   6998,29ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408557319 +    1,0294ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408557319 +         0ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408567014 +    0,9695ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408627096 +    6,0082ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408637089 +    0,9993ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 20) 639301844408647094 +    1,0005ms: Entering read loop.
+ (TID 1) 639301844621859164 +  21321,21ms: Shutting down with reason: BuildCompleteReuse, and exception: .
+OutOfProc Endpoint Packet Pump (TID 20) 639301844621879270 +    2,0106ms: Disconnecting voluntarily
+OutOfProc Endpoint Packet Pump (TID 20) 639301844621889174 +    0,9904ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 20) 639301844621899713 +    1,0539ms: Ending read loop
+ (TID 1) 639301844621910097 +    1,0384ms: Changing link status from Failed to Inactive
+ (TID 1) 639301844622054263 +   14,4166ms: Shut down complete.
+OutOfProc Endpoint Packet Pump (TID 30) 639301844622064270 +    1,0007ms: Waiting for connection 900000 ms...
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187549190 +  56548,49ms: Parent started connecting. Reading handshake from parent
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187564229 +    1,5039ms: Building handshake for node type X64, NodeReuse, Administrator, (version 1): options 16777260.
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187564229 +         0ms: Handshake salt is 
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187564229 +         0ms: Tools directory root is C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187644339 +     8,011ms: Successfully connected to parent.
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187664331 +    1,9992ms: Changing link status from Inactive to Active
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187664331 +         0ms: Entering read loop.
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187674387 +    1,0056ms: Parent disconnected abruptly.
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187674387 +         0ms: Changing link status from Active to Failed
+OutOfProc Endpoint Packet Pump (TID 30) 639301845187685146 +    1,0759ms: Ending read loop
+ (TID 1) 639301845187694465 +    0,9319ms: Shutting down with reason: ConnectionFailed, and exception: .
+ (TID 1) 639301845187694465 +         0ms: Changing link status from Failed to Inactive
+ (TID 1) 639301845187790612 +    9,6147ms: Shut down complete.

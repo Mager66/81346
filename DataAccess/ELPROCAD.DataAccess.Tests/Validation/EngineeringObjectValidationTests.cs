@@ -10,14 +10,14 @@ namespace ELPROCAD.DataAccess.Tests.Validation
 		private readonly IValidationService _validation =
 			new ValidationService();
 
-		[Theory(DisplayName = "An object may exist without a sheet when any one aspect is assigned")]
+		[Theory(DisplayName = "An object with any one aspect is accepted")]
 		[InlineData("PowerFunction")]
 		[InlineData("ControlFunction")]
 		[InlineData("TopographicStructure")]
 		[InlineData("Location")]
 		[InlineData("Function")]
 		[InlineData("Product")]
-		public void OneAspectWithoutSheet_IsAccepted(string aspect)
+		public void OneAspect_IsAccepted(string aspect)
 		{
 			var entity = new EngineeringObject
 			{
@@ -48,19 +48,15 @@ namespace ELPROCAD.DataAccess.Tests.Validation
 					break;
 			}
 
-			Assert.Null(entity.SheetId);
 			Assert.True(_validation.Validate(entity).IsValid);
 		}
 
-		[Theory(DisplayName = "An object without an aspect is rejected even when it belongs to a sheet")]
-		[InlineData(false)]
-		[InlineData(true)]
-		public void NoAspect_IsRejected(bool hasSheet)
+		[Fact(DisplayName = "An object without an aspect is rejected")]
+		public void NoAspect_IsRejected()
 		{
 			var entity = new EngineeringObject
 			{
-				ProjectId = Guid.NewGuid(),
-				SheetId = hasSheet ? Guid.NewGuid() : null
+				ProjectId = Guid.NewGuid()
 			};
 
 			var result = _validation.Validate(entity);

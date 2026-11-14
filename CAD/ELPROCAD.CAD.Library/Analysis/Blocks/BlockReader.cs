@@ -46,11 +46,11 @@ namespace ELPROCAD.CAD.Library.Analysis.Blocks
 			var attributes = new List<CadAttribute>();
 			foreach(AcDb.ObjectId attId in block.AttributeCollection)
 			{
-				if (transaction.GetObject(attId, AcDb.OpenMode.ForRead) is not AcDb.AttributeReference att)
+				if (attId.IsErased || !attId.IsValid)
 					continue;
 
-				if(attId.IsErased || !attId.IsValid) 
-					continue;
+				if (transaction.GetObject(attId, AcDb.OpenMode.ForRead) is not AcDb.AttributeReference att)
+					continue;				
 
 				attributes.Add(new CadAttribute(objectId: attId, ownerId: block.ObjectId, tag: att.Tag, value: att.TextString));
 			}

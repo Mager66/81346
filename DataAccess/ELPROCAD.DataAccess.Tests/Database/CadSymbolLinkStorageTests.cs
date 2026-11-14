@@ -31,6 +31,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 
 		private Guid SaveLink(
 			Guid documentId,
+			Guid sheetId,
 			long blockHandle,
 			Guid engineeringObjectId)
 		{
@@ -39,6 +40,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 				var link = new CadSymbolLink
 				{
 					DocumentId = documentId,
+					SheetId = sheetId,
 					BlockHandle = blockHandle,
 					EngineeringObjectId = engineeringObjectId
 				};
@@ -50,15 +52,15 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			});
 		}
 
-		[Fact(DisplayName =
-			"A CAD symbol link preserves its identifiers after reopening")]
+		[Fact(DisplayName =	"A CAD symbol link preserves its identifiers after reopening")]
 		public void Save_Reopen_PreservesIdentifiers()
 		{
 			var documentId = Guid.NewGuid();
+			var sheetId = Guid.NewGuid();	
 			var objectId = Guid.NewGuid();
 			const long handle = 0x63F;
 
-			var linkId = SaveLink(documentId, handle, objectId);
+			var linkId = SaveLink(documentId, sheetId, handle, objectId);
 
 			_database.Execute(uow =>
 			{
@@ -71,21 +73,22 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			});
 		}
 
-		[Fact(DisplayName =
-			"A block handle can only have one link within the same document")]
+		[Fact(DisplayName =	"A block handle can only have one link within the same document")]
 		public void DuplicateDocumentAndHandle_IsRejected()
 		{
 			var documentId = Guid.NewGuid();
+			var sheetId = Guid.NewGuid();
 			var originalObjectId = Guid.NewGuid();
 
 			var originalId = SaveLink(
 				documentId,
+				sheetId,
 				0x63F,
 				originalObjectId);
 
 			var exception = Record.Exception(() =>
 			{
-				SaveLink(documentId, 0x63F, Guid.NewGuid());
+				SaveLink(documentId, sheetId, 0x63F, Guid.NewGuid());
 			});
 
 			Assert.NotNull(exception);
@@ -102,15 +105,16 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			});
 		}
 
-		[Fact(DisplayName =
-			"The same block handle is allowed in different documents")]
+		[Fact(DisplayName =	"The same block handle is allowed in different documents")]
 		public void SameHandle_DifferentDocuments_IsAllowed()
 		{
 			var firstDocumentId = Guid.NewGuid();
+			var firstSheetId = Guid.NewGuid();
 			var secondDocumentId = Guid.NewGuid();
+			var secondSheetId = Guid.NewGuid();
 
-			SaveLink(firstDocumentId, 0x63F, Guid.NewGuid());
-			SaveLink(secondDocumentId, 0x63F, Guid.NewGuid());
+			SaveLink(firstDocumentId, firstSheetId, 0x63F, Guid.NewGuid());
+			SaveLink(secondDocumentId, secondSheetId, 0x63F, Guid.NewGuid());
 
 			_database.Execute(uow =>
 			{
@@ -126,15 +130,15 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			});
 		}
 
-		[Fact(DisplayName =
-			"Multiple CAD symbols can reference the same engineering object")]
+		[Fact(DisplayName =	"Multiple CAD symbols can reference the same engineering object")]
 		public void DifferentHandles_SameObject_IsAllowed()
 		{
 			var documentId = Guid.NewGuid();
+			var sheetId = Guid.NewGuid();
 			var objectId = Guid.NewGuid();
 
-			SaveLink(documentId, 0x63F, objectId);
-			SaveLink(documentId, 0x640, objectId);
+			SaveLink(documentId, sheetId, 0x63F, objectId);
+			SaveLink(documentId, sheetId, 0x640, objectId);
 
 			_database.Execute(uow =>
 			{
@@ -149,22 +153,31 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			});
 		}
 
-		[Fact(DisplayName =
-			"MDBX reinitialization preserves CAD symbol links")]
+		[Fact(DisplayName =	"MDBX reinitialization preserves CAD symbol links")]
 		public void Reinitialize_PreservesLinks()
 		{
+			var documentId = Guid.NewGuid();
+			var sheetId = Guid.NewGuid();
+			var objectId = Guid.NewGuid();
+
 			var linkId = SaveLink(
-				Guid.NewGuid(),
+				documentId,
+				sheetId,
 				0x63F,
-				Guid.NewGuid());
+				objectId);
 
 			var initializer = new DataAccessInitializer();
 			initializer.InitializeMdbx(_databasePath);
 
 			_database.Execute(uow =>
 			{
-				Assert.NotNull(
-					uow.GetObjectByKey<CadSymbolLink>(linkId));
+				var stored = uow.GetObjectByKey<CadSymbolLink>(linkId);
+
+				Assert.NotNull(stored);
+				Assert.Equal(documentId, stored!.DocumentId);
+				Assert.Equal(sheetId, stored.SheetId);
+				Assert.Equal(objectId, stored.EngineeringObjectId);
+				Assert.Equal(0x63FL, stored.BlockHandle);
 			});
 		}
 

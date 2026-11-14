@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net472</TargetFrameworks>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <!-- Apply the designer workaround only to the modern .NET target. -->
+    <OutputType Condition="'$(DesignTimeBuild)' == 'true' and '$(TargetFramework)' == 'net8.0-windows'">WinExe</OutputType>
+    <Configurations>BRX_23;ARX25</Configurations>
+    <Platforms>AnyCPU</Platforms>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'BRX_23'">
+    <TargetFrameworks>net472</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'ARX25'">
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+  </PropertyGroup>
+
+  <!-- Required when resolving XPO's .NET Framework assembly dependencies. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\DataAccess\ELPROCAD.DataAccess\ELPROCAD.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    
+  </ItemGroup>
+</Project>

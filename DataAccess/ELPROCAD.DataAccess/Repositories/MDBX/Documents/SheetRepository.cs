@@ -99,7 +99,9 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Documents
 				validateDatabase: (unitOfWork, existing) =>
 				{
 					var hasSymbols = new XPQuery<CadSymbolLink>(unitOfWork)
-						.Any(link => link.SheetId == existing.Id);
+					.Any(link =>
+					link.SheetId == existing.Id &&
+					link.DetachedAtUtc == null);
 
 					return hasSymbols
 					? ValidationResults.Failure(

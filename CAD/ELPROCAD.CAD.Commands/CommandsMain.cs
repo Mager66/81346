@@ -1,14 +1,11 @@
-﻿using DevExpress.Xpo;
-using ELPROCAD.CAD.Commands.Analysis;
+﻿using ELPROCAD.CAD.Commands.Analysis;
 using ELPROCAD.CAD.Data;
 using ELPROCAD.CAD.Data.Analysis;
 using ELPROCAD.CAD.Data.CRUD.Classification;
-using ELPROCAD.CAD.Data.Model.Classification;
 using ELPROCAD.CAD.Data.Model.Tests;
 using ELPROCAD.CAD.Data.Provider;
 using ELPROCAD.CAD.Library.Analysis.Sheets;
 using ELPROCAD.CAD.Library.Analysis.TitleBlocks;
-using ELPROCAD.CAD.TestWPF;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data.Common;
 using System.IO;
@@ -30,7 +27,7 @@ namespace ELPROCAD.CAD.Commands
 	public sealed class CommandsMain : AcTrx.IExtensionApplication
 	{
 		private static ServiceProvider? _serviceProvider;
-		const string projectDirectory = @"C:\Dev\POC\81346\TestProject";
+		const string projectDirectory = @"C:\LEA\81346\TestProject";
 
 
 		public void Initialize()
@@ -121,6 +118,11 @@ namespace ELPROCAD.CAD.Commands
 
 			using (var scope = _serviceProvider.CreateScope())
 			{
+				var reconciler = scope.ServiceProvider.GetRequiredService<CadSymbolLinkReconciler>();
+			}
+
+			using (var scope = _serviceProvider.CreateScope())
+			{
 				try
 				{
 					scope.ServiceProvider
@@ -134,16 +136,16 @@ namespace ELPROCAD.CAD.Commands
 			}
 		}
 
-		[AcTrx.CommandMethod("TestValidations")]
-		public static void TestValidations()
-		{
-			var queryMain = _serviceProvider?.GetRequiredService<QueryMainClassification>();
+		//[AcTrx.CommandMethod("TestValidations")]
+		//public static void TestValidations()
+		//{
+		//	var queryMain = _serviceProvider?.GetRequiredService<QueryMainClassification>();
 
-			queryMain.Create(abbrevation: "ABC", tooltip: "Kurres tips!", image: "");
+		//	queryMain.Create(abbrevation: "ABC", tooltip: "Kurres tips!", image: "");
 
-			var win = new MainWindow(queryMain);
-			AcAp.Application.ShowModelessWindow(AcAp.Application.MainWindow.Handle, win);
-		}
+		//	var win = new MainWindow(queryMain);
+		//	AcAp.Application.ShowModelessWindow(AcAp.Application.MainWindow.Handle, win);
+		//}
 
 		[AcTrx.CommandMethod("TEST_POCO")]
 		public static void TestPoco()
@@ -159,5 +161,6 @@ namespace ELPROCAD.CAD.Commands
 			AcAp.Application.DocumentManager.MdiActiveDocument
 				.Editor.WriteMessage("\n" + result);
 		}
+
 	}
 }
