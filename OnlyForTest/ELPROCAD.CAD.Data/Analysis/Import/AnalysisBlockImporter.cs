@@ -60,7 +60,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 
 			var finalLocations = _mdbx.Location.GetByProjectId(context.ProjectId)
 				.ToDictionary(location => location.Id);
-			var processedBlocks = UpdateCadPresentations(doc, context, finalLocations);
+			var processedBlocks = UpdateCadPresentations(doc, context, finalLocations, result);
 			var removedLinks = ReconcileSymbolLinks(doc, context);
 			var createdLocations = finalLocations.Keys.Count(id => !context.OriginalLocations.ContainsKey(id));
 

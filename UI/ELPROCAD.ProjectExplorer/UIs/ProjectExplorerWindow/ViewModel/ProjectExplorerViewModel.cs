@@ -18,8 +18,6 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 	{
 		private readonly Func<ProjectTreeNodeViewModel, IEnumerable<ProjectExplorerRow>>? _readRows;
 
-		private ProjectTreeNodeViewModel? _selectedNode;
-
 		/// <summary>
 		/// Gets the root nodes displayed in the tree.
 		/// </summary>
@@ -35,10 +33,87 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 		{
 			get;
 		} = new();
+		public ObservableCollection<ProjectExplorerSymbol> Symbols { get; } = new();
+		public ObservableCollection<string> TerminalDetails { get; } = new();
+		public ObservableCollection<string> ReferenceDetails { get; } = new();
 
 		public string SelectedTitle => SelectedNode?.Title ?? "Select a node";
 
 		public int RowCount => Rows.Count;
+
+		public string DetailError
+		{
+			get => _detailError;
+			private set => SetProperty(ref _detailError, value);
+		}
+		private string _detailError = "";
+
+		public bool DetailsOpen
+		{
+			get => _detailsOpen;
+			set
+			{
+				if (!SetProperty(ref _detailsOpen, value))
+					return;
+
+				if (value)
+					LoadSymbols();
+			}
+		}
+		private bool _detailsOpen;
+
+		public ProjectExplorerRow? SelectedRow
+		{
+			get => _selectedRow;
+			set
+			{
+				if (!SetProperty(ref _selectedRow, value))
+					return;
+
+				ClearDetails();
+
+				if (value?.HasSymbolDetails != true)
+					DetailsOpen = false;
+				else if (DetailsOpen)
+					LoadSymbols();
+			}
+		}
+		private ProjectExplorerRow? _selectedRow;
+
+		public ProjectExplorerSymbol? SelectedSymbol
+		{
+			get => _selectedSymbol;
+			set
+			{
+				if (!SetProperty(ref _selectedSymbol, value))
+					return;
+
+				TerminalDetails.Clear();
+				ReferenceDetails.Clear();
+				DetailError = "";
+
+				if (value == null)
+					return;
+
+				try
+				{
+					var details = value.ReadDetails();
+
+					foreach (var terminal in details.Terminals)
+						TerminalDetails.Add(terminal);
+
+					foreach (var reference in details.References)
+						ReferenceDetails.Add(reference);
+				}
+				catch (Exception exception)
+				{
+					DetailError =
+						$"Could not load symbol details: {exception.Message}";
+				}
+			}
+		}
+		private ProjectExplorerSymbol? _selectedSymbol;
+
 
 		public ProjectExplorerViewModel(Func<ProjectTreeNodeViewModel, IEnumerable<ProjectExplorerRow>>? readRows)
 		{
@@ -73,6 +148,7 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 				OnPropertyChanged(nameof(SelectedTitle));
 			}
 		}
+		private ProjectTreeNodeViewModel? _selectedNode;
 
 		/// <summary>
 		/// Reloads the selected node's content without changing the selection.
@@ -87,7 +163,7 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 			if(node == null)
 				return Array.Empty<ProjectExplorerRow>();
 
-			var rows = _readRows(node)
+			var rows = _readRows?.Invoke(node)
 				?? throw new InvalidOperationException("The row reader returned null.");
 
 			return rows.ToList();
@@ -95,6 +171,8 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 
 		private void ReplaceRows(IReadOnlyList<ProjectExplorerRow> rows)
 		{
+			SelectedRow = null;
+			DetailsOpen = false;
 			Rows.Clear();
 
 			foreach( var row in rows) 
@@ -102,5 +180,40 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 
 			OnPropertyChanged(nameof(RowCount));
 		}
+
+		private void ClearDetails()
+		{
+			SelectedSymbol = null;
+			Symbols.Clear();
+			TerminalDetails.Clear();
+			ReferenceDetails.Clear();
+			DetailError = "";
+		}
+
+		private void LoadSymbols()
+		{
+			ClearDetails();
+
+			try
+			{
+				var symbols = SelectedRow?.ReadSymbols?.Invoke();
+
+				if (symbols == null)
+					return;
+
+				foreach (var symbol in symbols)
+					Symbols.Add(symbol);
+
+				// Multiple presentations require an explicit selection.
+				if (Symbols.Count == 1)
+					SelectedSymbol = Symbols[0];
+			}
+			catch (Exception exception)
+			{
+				DetailError =
+					$"Could not load CAD symbols: {exception.Message}";
+			}
+		}
+
 	}
 }

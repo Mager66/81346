@@ -407,6 +407,282 @@ namespace ELPROCAD.DataAccess.Tests.Database
 					_mdbx.CadSymbolLink.GetReferenceTerminals(symbol.Id)).Value);
 		}
 
+		[Fact(DisplayName = "Symbol positions are stored per presentation and survive reinitialization")]
+		public void Position_RoundTrip_PerSymbol()
+		{
+			var a = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId, _sheetId, 1, _objectId,
+				Array.Empty<(string Tag, string Designation)>(),
+				(10, 20, 3, "4", "C"));
+
+			var b = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId, _sheetId, 2, _objectId,
+				Array.Empty<(string Tag, string Designation)>(),
+				(90, 80, 0, null, null));
+
+			Assert.True(a.Validation.IsValid);
+			Assert.True(b.Validation.IsValid);
+
+			var reopened = new DataAccessInitializer().InitializeMdbx(_path);
+			var stored = reopened.CadSymbolLink.GetByBlock(_documentId, 1)!;
+
+			Assert.Equal(10d, stored.PositionX);
+			Assert.Equal(20d, stored.PositionY);
+			Assert.Equal(3d, stored.PositionZ);
+			Assert.Equal("4", stored.GridColumn);
+			Assert.Equal("C", stored.GridRow);
+
+			var other = reopened.CadSymbolLink.GetByBlock(_documentId, 2)!;
+
+			Assert.Equal(90d, other.PositionX);
+			Assert.Null(other.GridColumn);
+			Assert.Null(other.GridRow);
+		}
+
+		[Fact(DisplayName =	"A new analysis clears obsolete grid labels while retaining the current CAD position")]
+		public void Position_Update_ClearsGrid()
+		{
+			var created = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId, _sheetId, 1, _objectId,
+				new[] { ("UTTAG1", "A1") },
+				(10, 20, 0, "1", "A"));
+
+			Assert.True(created.Validation.IsValid);
+
+			var changed = _mdbx.CadSymbolLink.ReplaceTerminals(
+				created.Value!,
+				new[] { ("UTTAG1", "A1") },
+				(300, 400, 5, null, null));
+
+			Assert.True(changed.Validation.IsValid);
+
+			var stored = _mdbx.CadSymbolLink.GetByBlock(_documentId, 1)!;
+
+			Assert.Equal(300d, stored.PositionX);
+			Assert.Equal(400d, stored.PositionY);
+			Assert.Equal(5d, stored.PositionZ);
+			Assert.Null(stored.GridColumn);
+			Assert.Null(stored.GridRow);
+		}
+
+		[Fact(DisplayName =	"Reference updates preserve omitted positions and accept explicit new positions")]
+		public void Position_Reference_PreservesAndUpdates()
+		{
+			var created = _mdbx.CadSymbolLink.CreateReferenceContact(
+				_documentId, _sheetId, 1, _objectId,
+				"EPCBI05C", "Q02", "", "",
+				new[] { ("UTTAG1", "13") },
+				(10, 20, 0, "2", "B"));
+
+			Assert.True(created.Validation.IsValid);
+
+			var retained = _mdbx.CadSymbolLink.ReplaceReferenceContact(
+				created.Value!,
+				"EPCBI05C", "Q02", "", "New text",
+				new[] { ("UTTAG1", "13") });
+
+			Assert.True(retained.Validation.IsValid);
+			Assert.Equal("2", retained.Value!.GridColumn);
+			Assert.Equal(10d, retained.Value.PositionX);
+
+			var moved = _mdbx.CadSymbolLink.ReplaceReferenceContact(
+				retained.Value,
+				"EPCBI05C", "Q02", "", "New text",
+				new[] { ("UTTAG1", "13") },
+				(50, 60, 0, null, null));
+
+			Assert.True(moved.Validation.IsValid);
+
+			var stored = _mdbx.CadSymbolLink.GetByBlock(_documentId, 1)!;
+
+			Assert.Equal(50d, stored.PositionX);
+			Assert.Null(stored.GridColumn);
+			Assert.Null(stored.GridRow);
+		}
+
+		[Fact(DisplayName =	"Invalid position data leaves stored coordinates and versions unchanged")]
+		public void Position_Invalid_IsRejected()
+		{
+			var created = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId, _sheetId, 1, _objectId,
+				Array.Empty<(string Tag, string Designation)>(),
+				(10, 20, 0, "1", "A"));
+
+			Assert.True(created.Validation.IsValid);
+
+			var invalid =
+				new (double X, double Y, double Z, string? Column, string? Row)[]
+				{
+			(double.NaN, 20, 0, null, null),
+			(10, double.PositiveInfinity, 0, null, null),
+			(10, 20, 0, "1", null),
+			(10, 20, 0, " ", "A"),
+			(10, 20, 0, new string('X', 256), "A")
+				};
+
+			foreach (var position in invalid)
+			{
+				var result = _mdbx.CadSymbolLink.ReplaceTerminals(
+					created.Value!,
+					Array.Empty<(string Tag, string Designation)>(),
+					position);
+
+				Assert.False(result.Validation.IsValid);
+
+				var stored = _mdbx.CadSymbolLink.GetByBlock(_documentId, 1)!;
+
+				Assert.Equal(10d, stored.PositionX);
+				Assert.Equal("1", stored.GridColumn);
+				Assert.Equal(created.Value!.LoadedVersion, stored.LoadedVersion);
+			}
+		}
+
+		[Fact(DisplayName =	"A stale position update cannot overwrite the latest analysis")]
+		public void Position_StaleVersion_IsRejected()
+		{
+			var original = AddSymbol(1);
+
+			Assert.Null(original.PositionX);
+
+			var first = _mdbx.CadSymbolLink.ReplaceTerminals(
+				original,
+				Array.Empty<(string Tag, string Designation)>(),
+				(10, 20, 0, "1", "A"));
+
+			Assert.True(first.Validation.IsValid);
+
+			var second = _mdbx.CadSymbolLink.ReplaceTerminals(
+				original,
+				Array.Empty<(string Tag, string Designation)>(),
+				(90, 80, 0, "9", "Z"));
+
+			Assert.False(second.Validation.IsValid);
+
+			var stored = _mdbx.CadSymbolLink.GetByBlock(_documentId, 1)!;
+
+			Assert.Equal(10d, stored.PositionX);
+			Assert.Equal("1", stored.GridColumn);
+		}
+
+		[Fact(DisplayName =	"A physical contact resolves reference contacts across documents by terminal value")]
+		public void XTargets_PhysicalToReference_UsesStoredSheetAndCoordinate()
+		{
+			var physical = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId,
+				_sheetId,
+				1,
+				_objectId,
+				new[] { ("UTTAG1", "1"), ("UTTAG2", "2") });
+
+			Assert.True(physical.Validation.IsValid);
+
+			var document = new Document
+			{
+				ProjectId = _read.GetById<Document>(_documentId)!.ProjectId,
+				Name = "Other.dwg",
+				Path = "Other.dwg"
+			};
+
+			var sheet = new Sheet
+			{
+				DocumentId = document.Id,
+				SheetNo = "002"
+			};
+
+			_database.Execute(uow =>
+			{
+				uow.Save(document);
+				uow.Save(sheet);
+				uow.CommitChanges();
+			});
+
+			var reference = _mdbx.CadSymbolLink.CreateReferenceContact(
+				document.Id,
+				sheet.Id,
+				2,
+				_objectId,
+				"EPCBI05C",
+				"Q03",
+				"",
+				"",
+				new[] { ("UTTAG5", "1"), ("UTTAG6", "2") },
+				(10, 20, 0, "4", "C"));
+
+			Assert.True(reference.Validation.IsValid);
+
+			var target = Assert.Single(
+				_mdbx.CadSymbolLink.GetReferenceTargets(physical.Value!.Id));
+
+			Assert.Equal(document.Id, target.DocumentId);
+			Assert.Equal("Other.dwg", target.DocumentName);
+			Assert.Equal("002", target.SheetNo);
+			Assert.Equal("4", target.Column);
+			Assert.Equal("C", target.Row);
+
+			Assert.True(
+				_mdbx.CadSymbolLink.Delete(reference.Value!).IsValid);
+
+			Assert.Empty(
+				_mdbx.CadSymbolLink.GetReferenceTargets(physical.Value.Id));
+		}
+
+		[Fact(DisplayName =	"Renumbering a sheet updates both reference directions without replacing symbol links")]
+		public void XTargets_SheetRenumbered_PreservesLinks()
+		{
+			var reference = _mdbx.CadSymbolLink.CreateReferenceContact(
+				_documentId, _sheetId, 1, _objectId,
+				"EPCBI05C", "Q03", "", "",
+				new[] { ("UTTAG1", "1") },
+				(10, 20, 0, "4", "C"));
+
+			var physical = _mdbx.CadSymbolLink.CreateWithTerminals(
+				_documentId, _sheetId, 2, _objectId,
+				new[] { ("UTTAG2", "1") },
+				(50, 60, 0, "2", "D"));
+
+			Assert.True(reference.Validation.IsValid);
+			Assert.True(physical.Validation.IsValid);
+
+			Assert.Equal("001", Assert.Single(
+				_mdbx.CadSymbolLink.GetReferenceTargets(reference.Value!.Id)).SheetNo);
+
+			Assert.Equal("001", Assert.Single(
+				_mdbx.CadSymbolLink.GetReferenceTargets(physical.Value!.Id)).SheetNo);
+
+			var sheet = _mdbx.Sheet.GetById(_sheetId)!;
+			sheet.SheetNo = "002";
+
+			var updated = _mdbx.Sheet.Update(sheet);
+
+			Assert.True(updated.Validation.IsValid);
+			Assert.Equal(_sheetId, updated.Value!.Id);
+
+			var forward = Assert.Single(
+				_mdbx.CadSymbolLink.GetReferenceTargets(reference.Value.Id));
+
+			var reverse = Assert.Single(
+				_mdbx.CadSymbolLink.GetReferenceTargets(physical.Value.Id));
+
+			Assert.Equal("002", forward.SheetNo);
+			Assert.Equal("002", reverse.SheetNo);
+			Assert.Equal("2", forward.Column);
+			Assert.Equal("D", forward.Row);
+			Assert.Equal("4", reverse.Column);
+			Assert.Equal("C", reverse.Row);
+
+			foreach (var original in new[] { reference.Value, physical.Value })
+			{
+				var stored = _mdbx.CadSymbolLink.GetByBlock(
+					_documentId,
+					original.BlockHandle)!;
+
+				Assert.Equal(original.Id, stored.Id);
+				Assert.Equal(_sheetId, stored.SheetId);
+				Assert.Equal(_objectId, stored.EngineeringObjectId);
+				Assert.False(stored.IsDetached);
+			}
+		}
+
 		public void Dispose()
 		{
 			// Delete only the unique temporary directory created by this fixture.

@@ -18,7 +18,7 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 
 		public string Description { get; }
 
-		public ProjectExplorerRow(Guid entityId, string title, string description = "")
+		public ProjectExplorerRow(Guid entityId, string title, string description = "", Func<IReadOnlyList<ProjectExplorerSymbol>>? readSymbols = null)
 		{
 			if (entityId == Guid.Empty)
 			{
@@ -30,6 +30,11 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel
 			EntityId = entityId;
 			Title = title ?? throw new ArgumentNullException(nameof(title));
 			Description = description ?? throw new ArgumentNullException(nameof(description));
+			ReadSymbols = readSymbols;
 		}
+
+		internal Func<IReadOnlyList<ProjectExplorerSymbol>>? ReadSymbols { get; }
+
+		public bool HasSymbolDetails => ReadSymbols != null;
 	}
 }

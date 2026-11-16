@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ELPROCAD.CAD.Library.Analysis.Sheets;
 using ELPROCAD.CAD.Library.CadEntity;
 using ELPROCAD.DataAccess.Contracts.MDBX.Objects;
 
@@ -172,8 +173,13 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 		}
 
 		/// <summary>Saves a new link and its terminal mappings in one database commit.</summary>
-		private void SaveSymbolTerminals(ImportContext context, ImportBlock item, Guid objectId)
+		private void SaveSymbolTerminals(ImportContext context, ImportBlock item, Guid objectId, SheetAnalysisData analysis)
 		{
+			var point = item.Block.Position;
+			var grid = analysis.GetGridCoordinate(point);
+
+			(double X, double Y, double Z, string? Column, string? Row) position = (point.X, point.Y, point.Z, grid?.X, grid?.Y);
+
 			var existing = _mdbx.CadSymbolLink.GetByBlock(context.Document.Id, item.Block.ObjectId.Handle.Value);
 
 			if (existing != null && (existing.EngineeringObjectId != objectId || existing.SheetId != context.Sheet.Id))
@@ -194,14 +200,16 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 						item.Attribute.Value,
 						placement,
 						referenceText,
-						item.Terminals)
+						item.Terminals,
+						position)
 					: _mdbx.CadSymbolLink.ReplaceReferenceContact(
 						existing,
 						item.Block.BlockName,
 						item.Attribute.Value,
 						placement,
 						referenceText,
-						item.Terminals);
+						item.Terminals,
+						position);
 
 				Require(result);
 				return;
@@ -209,7 +217,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 			if (existing == null)
 			{
 				Require(_mdbx.CadSymbolLink.CreateWithTerminals(context.Document.Id, context.Sheet.Id,
-					item.Block.ObjectId.Handle.Value, objectId, item.Terminals));
+					item.Block.ObjectId.Handle.Value, objectId, item.Terminals, position));
 				return;
 			}
 
@@ -222,7 +230,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 				existing = _mdbx.CadSymbolLink.GetByBlock(context.Document.Id, item.Block.ObjectId.Handle.Value)
 					?? throw new InvalidOperationException("The reattached symbol link no longer exists.");
 			}
-			Require(_mdbx.CadSymbolLink.ReplaceTerminals(existing, item.Terminals));
+			Require(_mdbx.CadSymbolLink.ReplaceTerminals(existing, item.Terminals, position));
 		}
 	}
 }

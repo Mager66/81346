@@ -48,10 +48,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 			var spaceId = block.OwnerId;
 			var titleBlockReader = new TitleBlockReader();
 
-			var titleBlock = titleBlockReader
-				.Read(transaction, spaceId)
-				.FirstOrDefault(candidate =>
-					candidate.ObjectId == titleBlockId);
+			var titleBlock = titleBlockReader.ReadSelected(transaction, titleBlockId);
 
 			if (titleBlock == null)
 			{

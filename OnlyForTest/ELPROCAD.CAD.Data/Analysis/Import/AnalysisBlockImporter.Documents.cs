@@ -25,23 +25,34 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 	{
 		private static void ValidateImportInput(AcAp.Document doc, SheetAnalysisData result)
 		{
-			if (doc == null) throw new ArgumentNullException(nameof(doc));
-			if (result == null) throw new ArgumentNullException(nameof(result));
+			if (doc == null) 
+				throw new ArgumentNullException(nameof(doc));
+
+			if (result == null) 
+				throw new ArgumentNullException(nameof(result));
+
 			if (!Path.IsPathRooted(doc.Name))
 				throw new InvalidOperationException("Save the drawing before importing.");
-			if (string.IsNullOrWhiteSpace(result.TitleBlock.SheetLayer))
+
+			if (string.IsNullOrWhiteSpace(result.TitleBlock.SheetNo))
 				throw new InvalidOperationException("The title block does not contain a sheet number.");
 		}
 
 		private ImportContext CreateImportContext(AcAp.Document doc, SheetAnalysisData result)
 		{
 			var projects = _pdsx.Project.GetAll();
+
 			if (projects.Count != 1)
 				throw new InvalidOperationException("The analysis database must contain exactly one project.");
+
 			var project = projects[0];
+
 			var document = GetOrCreateDocument(project.Id, doc.Name);
-			var sheet = GetOrCreateSheet(document.Id, result.TitleBlock.SheetLayer);
+
+			var sheet = GetOrCreateSheet(document.Id, result.TitleBlock.SheetNo, result.TitleBlock.IsMultiSheet);
+
 			var locations = _mdbx.Location.GetByProjectId(project.Id).ToDictionary(location => location.Id);
+
 			return new ImportContext(project.Id, document, sheet, locations);
 		}
 
@@ -81,9 +92,34 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 				path));
 		}
 
-		private ISheet GetOrCreateSheet(Guid documentId, string sheetNo)
+		private ISheet GetOrCreateSheet(Guid documentId, string sheetNo, bool isMultiSheet)
 		{
-			var existing = _mdbx.Sheet.GetByDocumentId(documentId)
+			var sheets = _mdbx.Sheet.GetByDocumentId(documentId);
+
+			if (!isMultiSheet)
+			{
+				if (sheets.Count > 1)
+				{
+					throw new InvalidOperationException(
+						"The drawing has one title block but multiple stored sheets. " +
+						"Resolve the sheet mapping before importing.");
+				}
+
+				if (sheets.Count == 1)
+				{
+					var sheet = sheets[0];
+
+					if (string.Equals(sheet.SheetNo, sheetNo, StringComparison.Ordinal))
+						return sheet;
+
+					// Preserve the sheet identity and all existing symbol links.
+					sheet.SheetNo = sheetNo;
+
+					return Require(_mdbx.Sheet.Update(sheet));
+				}
+			}
+
+			var existing = sheets
 				.SingleOrDefault(sheet =>
 					string.Equals(
 						sheet.SheetNo,

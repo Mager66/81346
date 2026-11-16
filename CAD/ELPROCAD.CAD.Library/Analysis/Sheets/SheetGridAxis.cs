@@ -9,6 +9,11 @@
 		private readonly double _step;
 		private readonly string[] _labels;
 
+		// TODO: Delete, only for diagnostics
+		internal int IntervalCount => _labels.Length;
+		// TODO: Delete, only for diagnostics
+		internal string LabelsText => string.Join("|", _labels);
+
 		public SheetGridAxis(double start, double nextBoundary, IEnumerable<string> labels)
 		{
 			if (!IsFinite(start) || !IsFinite(nextBoundary))

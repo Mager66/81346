@@ -39,5 +39,12 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 
 			Networks = new List<ConnectionNetwork>(networks).AsReadOnly();
 		}
+
+		public IReadOnlyList<string> GetGridDiagnostics() =>
+			Grid?.Describe() ??
+			new[] { "GRID: no ruler markers found on the selected sheet." };
+
+		public string DescribeGridPosition(AcGe.Point3d position) =>
+			Grid?.DescribePosition(position) ?? "NO_RULER";
 	}
 }

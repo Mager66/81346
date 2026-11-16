@@ -54,12 +54,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 
 		/// <summary>Atomically replaces the complete terminal list of an active symbol.</summary>
 		(ICadSymbolLink? Value, ValidationResult Validation) ReplaceTerminals(
-			ICadSymbolLink symbol, IReadOnlyList<(string Tag, string Designation)> terminals);
+			ICadSymbolLink symbol, IReadOnlyList<(string Tag, string Designation)> terminals,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null);
 
 		/// <summary>Creates the link and its complete terminal list atomically.</summary>
 		(ICadSymbolLink? Value, ValidationResult Validation) CreateWithTerminals(
 			Guid documentId, Guid sheetId, long blockHandle, Guid engineeringObjectId,
-			IReadOnlyList<(string Tag, string Designation)> terminals);
+			IReadOnlyList<(string Tag, string Designation)> terminals,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null);
 
 		/// <summary>
 		/// Creates a reference symbol and its attribute snapshot in one commit.
@@ -73,7 +75,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			string designation,
 			string placement,
 			string referenceText,
-			IReadOnlyList<(string Tag, string Designation)> slots);
+			IReadOnlyList<(string Tag, string Designation)> slots, 
+			(double X, double Y, double Z, string? Column, string? Row)? position = null);
 
 		/// <summary>
 		/// Replaces reference attributes and reactivates the link atomically.
@@ -84,7 +87,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			string designation,
 			string placement,
 			string referenceText,
-			IReadOnlyList<(string Tag, string Designation)> slots);
+			IReadOnlyList<(string Tag, string Designation)> slots,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null);
 
 		/// <summary>
 		/// Reads the reference snapshot, including snapshots for detached links.
@@ -95,6 +99,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		/// Reads reference slots using the CAD symbol link identifier.
 		/// </summary>
 		IReadOnlyList<ICadReferenceContactTerminal> GetReferenceTerminals(Guid symbolLinkId);
+
+		/// <summary>
+		/// Reads persisted target locations matching the reference contact's terminal values.
+		/// </summary>
+		IReadOnlyList<(
+			Guid DocumentId,
+			string DocumentName,
+			string SheetNo,
+			string? Column,
+			string? Row)> GetReferenceTargets(Guid symbolLinkId);
 	}
 }
 

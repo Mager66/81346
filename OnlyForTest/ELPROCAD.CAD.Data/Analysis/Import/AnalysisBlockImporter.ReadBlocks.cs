@@ -76,30 +76,43 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 			return item;
 		}
 
-		private static void ValidateRegisteredSymbol(ICadSymbolLink? registered, Guid? xdataId, Guid sheetId)
+		private void ValidateRegisteredSymbol(ICadSymbolLink? registered, Guid? xdataId, Guid sheetId)
 		{
 			if (registered != null && registered.SheetId != sheetId)
-				throw new InvalidOperationException("The CAD symbol is registered on another sheet.");
+				throw new InvalidOperationException(
+					"The CAD symbol is registered on another sheet.");
 
-			if (registered != null && xdataId.HasValue &&
-				registered.EngineeringObjectId != xdataId.Value)
+			if (registered == null ||
+				!xdataId.HasValue ||
+				registered.EngineeringObjectId == xdataId.Value)
+			{
+				return;
+			}
+
+			// A GUID missing from this database is stale, not a competing object.
+			// GetById also returns deletion-marked objects; these are not stale.
+			if (_mdbx.EngineeringObject.GetById(xdataId.Value) != null)
 			{
 				throw new InvalidOperationException(
-					"The registered symbol link and XData reference different objects.");
+					$"The registered symbol link references '{registered.EngineeringObjectId}', " +
+					$"but XData references another existing object '{xdataId.Value}'. " +
+					"No automatic reassignment was performed.");
 			}
 		}
 
 		/// <summary>
-		/// Resolves unregistered symbols by designation instead of an inherited GUID.
+		/// Preserves inherited or stale XData for checked replacement after persistence.
 		/// </summary>
-		private static Guid? ResolveInitialObjectLink(ImportBlock item, ICadSymbolLink? registered, Guid? xdataId)
+		private static Guid? ResolveInitialObjectLink(ImportBlock item, ICadSymbolLink? registered,	Guid? xdataId)
 		{
-			if (registered != null)
-				return registered.EngineeringObjectId;
+			item.CopiedObjectId =
+				registered == null ||
+				registered.EngineeringObjectId != xdataId
+					? xdataId
+					: null;
 
-			// Retain the old GUID only for checked replacement after persistence.
-			item.CopiedObjectId = xdataId;
-			return null;
+			// Unregistered symbols continue through designation-based resolution.
+			return registered?.EngineeringObjectId;
 		}
 
 		private void ReadOriginalLocation(ImportBlock item, ImportContext context)

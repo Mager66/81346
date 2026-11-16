@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ELPROCAD.CAD.Library.Analysis.TitleBlocks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,7 +18,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 	/// </summary>
 	internal sealed class SheetGridReader
 	{
-		internal SheetGrid? Read(AcDb.Transaction transaction, AcDb.ObjectId spaceId, string sheetLayer, double tolerance, out HashSet<AcDb.ObjectId> rulerRoots)
+		internal SheetGrid? Read(AcDb.Transaction transaction, AcDb.ObjectId spaceId, TitleBlockInfo titleBlock, double tolerance, out HashSet<AcDb.ObjectId> rulerRoots)
 		{
 			if (double.IsNaN(tolerance) ||
 				double.IsInfinity(tolerance) ||
@@ -27,6 +28,9 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 			}
 
 			var roots = new HashSet<AcDb.ObjectId>();
+			// TODO: Delete, only for diagnostics
+			var diagnostics = new List<string>();
+
 			rulerRoots = roots;
 
 			var markers =
@@ -90,6 +94,22 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 								: Array.Empty<string>()));
 
 						roots.Add(rootId);
+
+						// TODO: Delete, only for diagnostics
+						string AttributeText(string tag) =>
+							attributes.TryGetValue(tag, out var value)
+							? value
+							: "<missing>";
+
+						diagnostics.Add(
+							$"MARKER {key}: root={rootId.Handle}; handle={block.Handle}; " +
+							$"local={SheetGrid.PointText(block.Position)}; " +
+							$"world={SheetGrid.PointText(markers[key].Position)}; " +
+							$"MODE='{AttributeText("MODE")}'; START='{AttributeText("START")}'; " +
+							$"COUNT='{AttributeText("COUNT")}'; LABELS='{AttributeText("LABELS")}'" +
+							(role == "STEP"
+								? " (numbering attributes ignored on STEP)"
+								: ""));
 					}
 					catch (ArgumentException exception)
 					{
@@ -135,12 +155,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 				if (!id.IsValid || id.IsErased)
 					continue;
 
-				if (transaction.GetObject(
-						id, AcDb.OpenMode.ForRead) is AcDb.BlockReference block &&
-					string.Equals(
-						block.Layer,
-						sheetLayer,
-						StringComparison.OrdinalIgnoreCase))
+				if (transaction.GetObject(id, AcDb.OpenMode.ForRead) is AcDb.BlockReference block && titleBlock.IncludesLayer(block.Layer))
 				{
 					Visit(block, AcGe.Matrix3d.Identity, id);
 				}
@@ -165,7 +180,7 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 				throw new InvalidOperationException(
 					"Incomplete ruler. Missing: " + string.Join(", ", missing));
 
-			return new SheetGrid(
+			var sheetGrid = new SheetGrid(
 				markers[required[0]].Position,
 				markers[required[1]].Position,
 				markers[required[2]].Position,
@@ -173,6 +188,10 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 				markers[required[0]].Labels,
 				markers[required[2]].Labels,
 				tolerance);
+
+			sheetGrid.MarkerDiagnostics = diagnostics.AsReadOnly();
+
+			return sheetGrid;
 		}
 
 		private static Dictionary<string, string> ReadAttributes(AcDb.Transaction transaction, AcDb.BlockReference block, AcDb.BlockTableRecord contents)

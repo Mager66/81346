@@ -23,7 +23,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 {
 	public sealed partial class AnalysisBlockImporter
 	{
-		private int UpdateCadPresentations(AcAp.Document doc, ImportContext context, IReadOnlyDictionary<Guid, ILocation> finalLocations)
+		private int UpdateCadPresentations(AcAp.Document doc, ImportContext context, IReadOnlyDictionary<Guid, ILocation> finalLocations, SheetAnalysisData analysis)
 		{
 			var processedBlocks = 0;
 
@@ -39,7 +39,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 						item.SourceLocationId!.Value,
 						finalLocations);
 
-					SaveSymbolTerminals(context, item, objectId);
+					SaveSymbolTerminals(context, item, objectId, analysis);
 
 					WriteLocationAttribute(doc, item, finalPath);
 

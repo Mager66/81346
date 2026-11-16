@@ -98,7 +98,11 @@ namespace ELPROCAD.CAD.Commands.Analysis
 				}
 
 				ed.WriteMessage(
-					$"\nBlad/lager: {result.TitleBlock.SheetLayer}" +
+					$"\nDocument: {doc.Name}" +
+					$"\nDrawing type: {(result.TitleBlock.IsMultiSheet ? "Multi-sheet" : "Single-sheet")}" +
+					$"\nSheet: {result.TitleBlock.SheetNo}" +
+					$"\nTitle block layer: {result.TitleBlock.SheetLayer}" +
+					$"\nAnalysis layers: {(result.TitleBlock.IsMultiSheet ? result.TitleBlock.SheetLayer : "All except 0")}" +
 					$"\nBlock: {result.Blocks.Count}" +
 					$"\nUttag: {result.Blocks.Sum(block => block.Terminals.Count)}" +
 					$"\nÖppna polylines: {result.Polylines.Count(polyline => !polyline.IsClosed)}" +
@@ -116,10 +120,66 @@ namespace ELPROCAD.CAD.Commands.Analysis
 						$"uttag [{string.Join(", ", terminals)}]");
 				}
 
+				ed.WriteMessage("\n--- GRID DIAGNOSTICS ---");
+
+				foreach (var line in result.GetGridDiagnostics())
+					ed.WriteMessage("\n" + line);
+
+				foreach (var block in result.Blocks)
+				{
+					var designation = block.GetAttribute("BET1")?.Value ?? "<missing>";
+
+					ed.WriteMessage(
+						$"\nBlock {block.ObjectId.Handle}, " +
+						$"name='{block.BlockName}', BET1='{designation}': " +
+						result.DescribeGridPosition(block.Position));
+				}
+
+				ed.WriteMessage("\n--- END GRID DIAGNOSTICS ---");
+
 			}
 			catch (Exception exception)
 			{
 				ed.WriteMessage($"\nAnalysen kunde inte slutföras: {exception.Message}");
+			}
+		}
+
+		public void ExecuteReferences()
+		{
+			var doc = AcAp.Application.DocumentManager.MdiActiveDocument;
+
+			if (doc == null)
+				return;
+
+			var ed = doc.Editor;
+
+			try
+			{
+				if (!SheetSelectionStore.TryGet(doc, out var titleBlockId))
+				{
+					ed.WriteMessage("\nSelect a title block first.");
+					return;
+				}
+
+				using var scope = _serviceProvider.CreateScope();
+
+				var importer = scope.ServiceProvider
+					.GetRequiredService<AnalysisBlockImporter>();
+
+				var result = importer.UpdateReferenceContacts(doc, titleBlockId);
+
+				ed.WriteMessage(
+					$"\nReferences updated: {result.Updated}; " +
+					$"unchanged: {result.Unchanged}; " +
+					$"errors: {result.Errors.Count}");
+
+				foreach (var error in result.Errors)
+					ed.WriteMessage("\n" + error);
+			}
+			catch (Exception exception)
+			{
+				ed.WriteMessage(
+					$"\nReference update failed: {exception.Message}");
 			}
 		}
 

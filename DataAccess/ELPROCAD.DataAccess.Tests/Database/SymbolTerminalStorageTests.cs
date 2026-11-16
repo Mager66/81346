@@ -229,6 +229,7 @@ namespace ELPROCAD.DataAccess.Tests.Database
 			Assert.Single(_repository.GetTerminals(second.Id));
 		}
 
+
 		// Interleave immediately before Update.Save commits, without changing production code.
 		private sealed class InterleavingDatabase : IDatabaseAccess
 		{

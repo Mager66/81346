@@ -23,6 +23,18 @@
                                                         Direction="Ascending"/>
                     </CollectionViewSource.SortDescriptions>
                 </CollectionViewSource>
+
+                <CollectionViewSource x:Key="SymbolsView" Source="{Binding Symbols}">
+                    <CollectionViewSource.SortDescriptions>
+                        <componentModel:SortDescription
+                            PropertyName="Caption"
+                            Direction="Ascending"/>
+                    </CollectionViewSource.SortDescriptions>
+                </CollectionViewSource>
+
+                <CollectionViewSource x:Key="TerminalsView" Source="{Binding TerminalDetails}"/>
+
+                <CollectionViewSource x:Key="ReferenceView" Source="{Binding ReferenceDetails}"/>
             </Grid.Resources>
 
             <Grid.ColumnDefinitions>
@@ -72,6 +84,16 @@
                            FontWeight="SemiBold"
                            Margin="0 0 0 10"/>
 
+                <ToggleButton Grid.Row="0"
+                              Content="Symbol details"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Top"
+                              Padding="10 4"
+                              IsEnabled="{Binding SelectedRow.HasSymbolDetails,
+                                                    FallbackValue=False,
+                                                    TargetNullValue=False}"
+                              IsChecked="{Binding DetailsOpen, Mode=TwoWay}"/>
+
                 <DataGrid x:Name="RowsGrid"
                           Grid.Row="1"
                           ItemsSource="{Binding Source={StaticResource RowsView}}"
@@ -83,7 +105,9 @@
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
                           HeadersVisibility="Column"
-                          GridLinesVisibility="Horizontal">
+                          GridLinesVisibility="Horizontal"
+                          SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                          IsSynchronizedWithCurrentItem="False">
 
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name / designation"
@@ -116,6 +140,116 @@
                 </StackPanel>
             </Grid>
 
+            <Border Grid.Column="2"
+                    Panel.ZIndex="10"
+                    Width="330"
+                    HorizontalAlignment="Right"
+                    Margin="0 40 0 0"
+                    Padding="12"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1">
+
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DetailsOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0 0 0 12">
+                        <ToggleButton DockPanel.Dock="Right"
+                                      Content="Close"
+                                      Padding="8 3"
+                                      IsChecked="{Binding DetailsOpen, Mode=TwoWay}"/>
+
+                        <TextBlock Text="{Binding SelectedRow.Title}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+
+                    </DockPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel>
+                                <TextBlock Text="CAD symbol" FontWeight="SemiBold"/>
+
+                                <ComboBox Margin="0 6 0 12"
+                                          ItemsSource="{Binding Source={StaticResource SymbolsView}}"
+                                          DisplayMemberPath="Caption"
+                                          IsSynchronizedWithCurrentItem="False"
+                                          SelectedItem="{Binding SelectedSymbol, Mode=TwoWay}"/>
+
+                            <TextBlock Text="No active CAD symbols in this selection."
+                                           TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Symbols.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <TextBlock Text="{Binding DetailError}"
+                                           Foreground="Firebrick"
+                                           TextWrapping="Wrap"/>
+
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedSymbol}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <TextBlock Text="Terminals"
+                                           FontWeight="SemiBold"
+                                           Margin="0 12 0 6"/>
+
+                                <ItemsControl ItemsSource="{Binding Source={StaticResource TerminalsView}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0 3"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Text="References"
+                                           FontWeight="SemiBold"
+                                           Margin="0 16 0 6"/>
+
+                                <ItemsControl ItemsSource="{Binding Source={StaticResource ReferenceView}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0 3"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                            </StackPanel>
+                        </StackPanel>
+                        </ScrollViewer>
+                    
+                </DockPanel>
+            </Border>
+            
         </Grid>
     </Border>
 </Window>

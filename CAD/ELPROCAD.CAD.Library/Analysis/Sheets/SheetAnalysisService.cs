@@ -57,9 +57,14 @@ namespace ELPROCAD.CAD.Library.Analysis.Sheets
 			var entities = entityReader.Read(
 				transaction,
 				spaceId,
-				titleBlock.SheetLayer);
+				titleBlock);
 
-			var grid = new SheetGridReader().Read(transaction, spaceId, titleBlock.SheetLayer, gridTolerance, out var rulerRoots);
+			var grid = new SheetGridReader().Read(
+				transaction,
+				spaceId,
+				titleBlock,
+				gridTolerance,
+				out var rulerRoots);
 
 			var blocks = ReadBlocks(transaction, entities, rulerRoots);
 			var polylines = ReadPolylines(transaction, entities);

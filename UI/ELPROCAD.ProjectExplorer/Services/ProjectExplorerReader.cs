@@ -128,9 +128,7 @@ namespace ELPROCAD.ProjectExplorer.Services
 						.ToArray();
 
 				case ProjectTreeNodeKind.Document:
-					return _mdbx.Sheet.GetByDocumentId(node.EntityId!.Value)
-						.Select(x => new ProjectExplorerRow(x.Id, x.SheetNo, "Sheet"))
-						.ToArray();
+					return ReadObjectRows(_mdbx.EngineeringObject.GetBySheetId(node.EntityId!.Value), node.EntityId.Value);
 
 				case ProjectTreeNodeKind.Sheet:
 					// The repository resolves sheet membership through CAD symbol links.
@@ -141,7 +139,7 @@ namespace ELPROCAD.ProjectExplorer.Services
 			}			 
 		}
 
-		private IReadOnlyList<ProjectExplorerRow> ReadObjectRows(IEnumerable<IEngineeringObject> objects)
+		private IReadOnlyList<ProjectExplorerRow> ReadObjectRows(IEnumerable<IEngineeringObject> objects, Guid? sheetId = null)
 		{
 			var locations = _mdbx.Location.GetByProjectId(_projectId)
 			  .ToDictionary(x => x.Id);
@@ -177,7 +175,8 @@ namespace ELPROCAD.ProjectExplorer.Services
 				   entity.LocationId.HasValue
 					   ? ReadLocationPath(entity.LocationId.Value)
 					   : entity.Id.ToString(),
-				   entity.IsMarkedForDeletion ? "Marked for deletion" : "Engineering object"))
+				   entity.IsMarkedForDeletion ? "Marked for deletion" : "Engineering object",
+				   readSymbols: () => ReadSymbols(entity.Id, sheetId)))
 			   .ToArray();
 		}
 
@@ -217,6 +216,91 @@ namespace ELPROCAD.ProjectExplorer.Services
 					locationIds.Contains(entity.LocationId.Value));
 
 			return ReadObjectRows(objects);
+		}
+
+		private IReadOnlyList<ProjectExplorerSymbol> ReadSymbols(Guid objectId,	Guid? sheetId)
+		{
+			var documents = _mdbx.Document.GetAll()
+				.Where(x => x.ProjectId == _projectId)
+				.ToDictionary(x => x.Id);
+
+			return _mdbx.CadSymbolLink.GetByObjectId(objectId)
+				.Where(x =>
+					!x.IsDetached &&
+					(!sheetId.HasValue || x.SheetId == sheetId.Value))
+				.Select(link =>
+				{
+					if (!documents.TryGetValue(link.DocumentId, out var document))
+					{
+						throw new InvalidOperationException(
+							"The symbol document is missing from this project.");
+					}
+
+					var sheet = _mdbx.Sheet.GetById(link.SheetId);
+
+					if (sheet == null || sheet.DocumentId != document.Id)
+					{
+						throw new InvalidOperationException(
+							"The symbol sheet does not belong to its document.");
+					}
+
+					return new ProjectExplorerSymbol(
+						link.Id,
+						$"{document.Name} \\ {sheet.SheetNo} — {link.BlockHandle:X}",
+						() => ReadSymbolDetails(objectId, link.Id));
+				})
+				.ToArray();
+		}
+
+		private (IReadOnlyList<string> Terminals, IReadOnlyList<string> References)	ReadSymbolDetails(Guid objectId, Guid linkId)
+		{
+			var link = _mdbx.CadSymbolLink.GetByObjectId(objectId)
+				.SingleOrDefault(x => x.Id == linkId && !x.IsDetached)
+				?? throw new InvalidOperationException(
+					"The symbol is no longer active. Reopen the details.");
+
+			var reference = _mdbx.CadSymbolLink.GetReferenceContact(link.Id);
+			string[] terminals;
+
+			if (reference != null)
+			{
+				terminals = _mdbx.CadSymbolLink.GetReferenceTerminals(link.Id)
+					.Select(x =>
+						$"{x.Tag}: {(string.IsNullOrWhiteSpace(x.Value) ? "(empty)" : x.Value)}")
+					.ToArray();
+			}
+			else
+			{
+				var catalog = _mdbx.CadSymbolLink.GetObjectTerminals(objectId)
+					.ToDictionary(x => x.Id);
+
+				terminals = _mdbx.CadSymbolLink.GetTerminals(link.Id)
+					.Select(slot =>
+					{
+						if (!catalog.TryGetValue(
+							slot.EngineeringObjectTerminalId,
+							out var terminal))
+						{
+							throw new InvalidOperationException(
+								"A symbol terminal is missing from the object catalog.");
+						}
+
+						return $"{slot.Tag}: {terminal.Designation}";
+					})
+					.ToArray();
+			}
+
+			// Show explicit document names independently of CAD XREF formatting.
+			var references = _mdbx.CadSymbolLink.GetReferenceTargets(link.Id)
+				.Select(x =>
+					$"{x.DocumentName}\\{x.SheetNo}" +
+					(x.Column != null && x.Row != null
+						? $" ({x.Column}.{x.Row})"
+						: ""))
+				.Distinct(StringComparer.Ordinal)
+				.ToArray();
+
+			return (terminals, references);
 		}
 	}
 }

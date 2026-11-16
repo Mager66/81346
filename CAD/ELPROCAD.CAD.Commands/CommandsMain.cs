@@ -90,11 +90,19 @@ namespace ELPROCAD.CAD.Commands
 		public static void AnalyzeSheet()
 		{
 			if (_serviceProvider == null)
-				throw new InvalidOperationException("Databasåtkomsten är inte initierad.");
+				throw new InvalidOperationException("Database access has not been initialized.");
 
 			new SheetAnalysisCommandHandler(_serviceProvider).Execute();
 		}
 
+		[AcTrx.CommandMethod("ELP_X", AcTrx.CommandFlags.Modal)]
+		public static void ExtractFromDb()
+		{
+			if (_serviceProvider == null)
+				throw new InvalidOperationException("Database access has not been initialized.");
+
+			new SheetAnalysisCommandHandler(_serviceProvider).ExecuteReferences();
+		}
 
 		private static void ConnectToDb()
 		{

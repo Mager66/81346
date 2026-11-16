@@ -218,13 +218,19 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		/// An empty list clears the presentation but retains the object's terminal catalog.
 		/// </summary>
 		public (ICadSymbolLink? Value, ValidationResult Validation) ReplaceTerminals(
-			ICadSymbolLink symbol, IReadOnlyList<(string Tag, string Designation)> terminals)
+			ICadSymbolLink symbol, IReadOnlyList<(string Tag, string Designation)> terminals,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null)
 		{
 			if (symbol == null) 
 				throw new ArgumentNullException(nameof(symbol));
 
 			if (terminals == null) 
 				throw new ArgumentNullException(nameof(terminals));
+
+			var positionValidation = ValidatePosition(position);
+
+			if (!positionValidation.IsValid)
+				return (null, positionValidation);
 
 			var values = terminals.ToArray();
 
@@ -237,6 +243,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				(uow, source, target) =>
 				{
 					replacement.Stage(uow, target);
+
+					ApplyPosition(target, position);
 
 					// A physical symbol must not retain an obsolete reference snapshot.
 					RemoveReferenceContact(uow, target.Id);
@@ -252,9 +260,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		/// <summary>Creates a symbol and all its terminal mappings in a single commit.</summary>
 		public (ICadSymbolLink? Value, ValidationResult Validation) CreateWithTerminals(
 			Guid documentId, Guid sheetId, long blockHandle, Guid engineeringObjectId,
-			IReadOnlyList<(string Tag, string Designation)> terminals)
+			IReadOnlyList<(string Tag, string Designation)> terminals,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null)
 		{
 			if (terminals == null) throw new ArgumentNullException(nameof(terminals));
+
+			var positionValidation = ValidatePosition(position);
+
+			if (!positionValidation.IsValid)
+				return (null, positionValidation);
+
 			var values = terminals.ToArray();
 			var input = new CadSymbolLink
 			{
@@ -269,6 +284,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 					SymbolTerminalReplacement.ValidateInput(values).Errors)),
 				(uow, source, target) => {
 					CopyLink(uow, source, target);
+					ApplyPosition(target, position);
 					replacement.Stage(uow, target);
 				},
 				(uow, entity) => {
@@ -279,15 +295,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 		}
 
 		public (ICadSymbolLink? Value, ValidationResult Validation) CreateReferenceContact(
-	Guid documentId,
-	Guid sheetId,
-	long blockHandle,
-	Guid engineeringObjectId,
-	string blockName,
-	string designation,
-	string placement,
-	string referenceText,
-	IReadOnlyList<(string Tag, string Designation)> slots)
+			Guid documentId,
+			Guid sheetId,
+			long blockHandle,
+			Guid engineeringObjectId,
+			string blockName,
+			string designation,
+			string placement,
+			string referenceText,
+			IReadOnlyList<(string Tag, string Designation)> slots,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null)
 		{
 			return SaveReferenceContact(
 				new CadSymbolLink
@@ -302,7 +319,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				designation,
 				placement,
 				referenceText,
-				slots);
+				slots,
+				position);
 		}
 
 		public (ICadSymbolLink? Value, ValidationResult Validation) ReplaceReferenceContact(
@@ -311,7 +329,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			string designation,
 			string placement,
 			string referenceText,
-			IReadOnlyList<(string Tag, string Designation)> slots)
+			IReadOnlyList<(string Tag, string Designation)> slots,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null)
 		{
 			if (symbol == null)
 				throw new ArgumentNullException(nameof(symbol));
@@ -331,7 +350,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				designation,
 				placement,
 				referenceText,
-				slots);
+				slots,
+				position);
 		}
 
 		private (ICadSymbolLink? Value, ValidationResult Validation) SaveReferenceContact(
@@ -341,8 +361,14 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			string designation,
 			string placement,
 			string referenceText,
-			IReadOnlyList<(string Tag, string Designation)> slots)
+			IReadOnlyList<(string Tag, string Designation)> slots,
+			(double X, double Y, double Z, string? Column, string? Row)? position = null)
 		{
+			var positionValidation = ValidatePosition(position);
+
+			if (!positionValidation.IsValid)
+				return (null, positionValidation);
+
 			if (string.IsNullOrWhiteSpace(blockName) || blockName.Length > 255)
 			{
 				return (null, ValidationResults.Failure(
@@ -384,6 +410,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 			{
 				if (isNew)
 					CopyLink(uow, source, target);
+
+				ApplyPosition(target, position);
 
 				target.DetachedAtUtc = null;
 
@@ -521,6 +549,59 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Objects
 				.ToList()
 				.AsReadOnly();
 		}
+
+		private static ValidationResult ValidatePosition((double X, double Y, double Z, string? Column, string? Row)? position)
+		{
+			if (!position.HasValue)
+				return new ValidationResult();
+
+			var p = position.Value;
+
+			if (new[] { p.X, p.Y, p.Z }
+				.Any(value => double.IsNaN(value) || double.IsInfinity(value)))
+			{
+				return ValidationResults.Failure(
+					nameof(ICadSymbolLink.PositionX),
+					"Position coordinates must be finite.");
+			}
+
+			if ((p.Column == null) != (p.Row == null) ||
+				(p.Column != null &&
+					(string.IsNullOrWhiteSpace(p.Column) || p.Column.Length > 255)) ||
+				(p.Row != null &&
+					(string.IsNullOrWhiteSpace(p.Row) || p.Row.Length > 255)))
+			{
+				return ValidationResults.Failure(
+					nameof(ICadSymbolLink.GridColumn),
+					"Grid column and row must both be absent or contain 1 to 255 characters.");
+			}
+
+			return new ValidationResult();
+		}
+
+		private static void ApplyPosition(CadSymbolLink target, (double X, double Y, double Z, string? Column, string? Row)? position)
+		{
+			// Omitted position preserves data for callers that do not analyze geometry.
+			if (!position.HasValue)
+				return;
+
+			var p = position.Value;
+
+			target.PositionX = p.X;
+			target.PositionY = p.Y;
+			target.PositionZ = p.Z;
+
+			// Null labels explicitly clear a previously available ruler coordinate.
+			target.GridColumn = p.Column;
+			target.GridRow = p.Row;
+		}
+
+		public IReadOnlyList<(
+			Guid DocumentId,
+			string DocumentName,
+			string SheetNo,
+			string? Column,
+			string? Row)> GetReferenceTargets(Guid symbolLinkId) => _read.GetReferenceTargets(symbolLinkId);
 	}
 }
 

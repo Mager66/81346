@@ -10,6 +10,19 @@
 
 		long BlockHandle { get; }
 
+		/// <summary>
+		/// Last analyzed insertion point in the document's world coordinate system.
+		/// </summary>
+		double? PositionX { get; }
+		double? PositionY { get; }
+		double? PositionZ { get; }
+
+		/// <summary>
+		/// Unformatted ruler labels. Both are null when no coordinate is available.
+		/// </summary>
+		string? GridColumn { get; }
+		string? GridRow { get; }
+
 		Guid EngineeringObjectId { get; }
 
 		int? LoadedVersion { get; }

@@ -20,6 +20,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Analysis\Import\AnalysisBlockImporter.References.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.12.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
     <PackageReference Include="VistaDB.6" Version="6.3.2" />
@@ -68,6 +72,12 @@
 
   <ItemGroup>
     <Folder Include="Analysis\Identity\" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <None Include="Analysis\Import\Extract\AnalysisBlockImporter.References.cs" />
   </ItemGroup>
 
 </Project>

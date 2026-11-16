@@ -19,6 +19,32 @@ namespace ELPROCAD.ProjectExplorer.UIs.ProjectExplorerWindow.ViewModel.Design
 				Nodes.Add(node);
 
 			SelectedNode = data.InitialSelection;
+
+			var sample = new ProjectExplorerRow(
+				Guid.NewGuid(),
+				"Q03",
+				"Contactor",
+				readSymbols: () => new[]
+				{
+					new ProjectExplorerSymbol(
+						Guid.NewGuid(),
+						@"Crap.dwg \ 002 — 355",
+						() => (
+						new[] { "UTTAG1: 1", "UTTAG2: 2" },
+						new[] { @"Kretsschema.dwg\001 (9.C)" })),
+
+					new ProjectExplorerSymbol(
+						Guid.NewGuid(),
+						@"Kretsschema.dwg \ 001 — 5BE",
+						() => (
+						new[] { "UTTAG1: 1", "UTTAG2: 2" },
+						new[] { @"Crap.dwg\002 (2.D)" }))
+				});
+
+			Rows.Add(sample);
+			SelectedRow = sample;
+			DetailsOpen = true;
+			SelectedSymbol = Symbols[0];
 		}
 
 		private sealed class DesignData
