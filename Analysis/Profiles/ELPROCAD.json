@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "profileId": "ELPROCAD",
+  "extractor": "ELPROCAD",
+  "boundaries": "Ignore",
+  "activeAspects": ["Location"],
+  "location": {
+    "structure": "Flat",
+    "placementAttribute": "PLAC",
+    "designationAttribute": "BET1",
+    "separator": "."
+  }
+}

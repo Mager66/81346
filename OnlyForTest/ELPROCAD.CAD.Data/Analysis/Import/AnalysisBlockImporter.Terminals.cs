@@ -141,7 +141,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 		}
 
 		/// <summary>Clears only a new copy with a verified original in this analysis. Ambiguous identities remain untouched.</summary>
-		private static bool ClearConfirmedCopyLink(AcAp.Document doc, ImportContext context,
+		private bool ClearConfirmedCopyLink(AcAp.Document doc, ImportContext context,
 			ImportBlock copy, Guid originalLinkId, ISet<string> invalidSymbols)
 		{
 			if (copy.RegisteredLink != null || !copy.OriginalXDataId.HasValue) return false;
@@ -165,7 +165,9 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 				{
 					var attribute = transaction.GetObject(item.Attribute.ObjectId, AcDb.OpenMode.ForRead)
 						as AcDb.AttributeReference;
-					if (attribute == null || attribute.TextString != item.Attribute.Value) return false;
+
+					if (!MatchesCapturedLocation(transaction, item)) 
+						return false;
 				}
 			}
 			EngineeringObjectLink.ClearExpected(doc.Database, copy.Block.ObjectId, copy.OriginalXDataId.Value);
@@ -187,7 +189,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 
 			if (item.IsReferenceContact)
 			{
-				var placement = item.Block.GetAttribute("PLAC")?.Value ?? "";
+				var placement = item.Block.GetAttribute(_extractor.PlacementAttributeTag)?.Value ?? "";
 				var referenceText = item.Block.GetAttribute("XREF")?.Value ?? "";
 
 				var result = existing == null

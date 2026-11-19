@@ -1,4 +1,5 @@
 ﻿using ELPROCAD.DataAccess.Repositories.MDBX.Aspects;
+using ELPROCAD.DataAccess.Repositories.MDBX.Connections;
 using ELPROCAD.DataAccess.Repositories.MDBX.Documents;
 using ELPROCAD.DataAccess.Repositories.MDBX.Objects;
 
@@ -14,7 +15,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX
 			ICadDocumentCustomPropertyRepository cadDocumentCustom, 
 			ILocationRepository location,
 			IEngineeringObjectRepository engineeringObject,
-			ICadSymbolLinkRepository cadSymbolLink)
+			ICadSymbolLinkRepository cadSymbolLink,
+			IConnectionAnalysisRepository connectionAnalysis)
 		{
 			Document = document ?? throw new ArgumentNullException(nameof(document));
 			Sheet = sheet ?? throw new ArgumentNullException(nameof(sheet));
@@ -24,6 +26,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX
 			Location = location ?? throw new ArgumentNullException(nameof(location));
 			EngineeringObject = engineeringObject ?? throw new ArgumentNullException(nameof(engineeringObject));
 			CadSymbolLink = cadSymbolLink ?? throw new ArgumentNullException(nameof(cadSymbolLink));
+			ConnectionAnalysis = connectionAnalysis ?? throw new ArgumentNullException(nameof(connectionAnalysis));
 		}
 
 		public IDocumentRepository Document { get; }
@@ -41,6 +44,8 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX
 		public IEngineeringObjectRepository EngineeringObject { get; }
 
 		public ICadSymbolLinkRepository CadSymbolLink { get; }
+
+		public IConnectionAnalysisRepository ConnectionAnalysis { get; }
 	}
 
 }

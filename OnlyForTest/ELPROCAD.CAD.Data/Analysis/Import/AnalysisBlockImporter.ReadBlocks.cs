@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Bricscad.Parametric;
 using ELPROCAD.CAD.Library.Analysis.Sheets;
 using ELPROCAD.CAD.Library.CadEntity;
 using ELPROCAD.DataAccess.Contracts.MDBX.Aspects;
@@ -30,8 +31,10 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 			{
 				try
 				{
-					// Capture BET1 before validation or presentation changes.
-					context.Designations[block.ObjectId] = block.GetAttribute(LocationAttributeTag)?.Value ?? "<missing>";
+					// Capture the original text before validation or CAD presentation changes.
+					context.Designations[block.ObjectId] =
+						$"{_extractor.PlacementAttributeTag}='{block.GetAttribute(_extractor.PlacementAttributeTag)?.Value}', " +
+						$"{_extractor.DesignationAttributeTag}='{block.GetAttribute(_extractor.DesignationAttributeTag)?.Value}'";
 
 					var item = ReadImportBlock(doc, block, context);
 					if (item != null)
@@ -54,18 +57,18 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 			ValidateRegisteredSymbol(registered, xdataId, context.Sheet.Id);
 
 			var linkedId = registered?.EngineeringObjectId ?? xdataId;
-			var attribute = block.GetAttribute(LocationAttributeTag);
+			if (block.Attributes == null)
+				throw new InvalidOperationException("Block attributes have not been loaded.");
 
-			if (attribute == null || string.IsNullOrWhiteSpace(attribute.Value))
-			{
-				if (linkedId.HasValue)
-					context.Fail(block.ObjectId, "The linked block has no location designation.");
+			var attribute = block.GetAttribute(_extractor.DesignationAttributeTag);
+			var placement = block.GetAttribute(_extractor.PlacementAttributeTag);
+
+			// Unrelated drawing blocks have neither source attribute nor an object link.
+			if (attribute == null && placement == null && !linkedId.HasValue)
 				return null;
-			}
 
-			var item = new ImportBlock(
-				block, attribute, ParseLocation(attribute.Value),
-				attribute.Value.Trim().EndsWith(LevelSeparator.ToString(), StringComparison.Ordinal));
+			var levels = ExtractLocationLevels(block.Attributes.Select(x => (x.Tag, (string?)x.Value)));
+			var item = new ImportBlock(block, attribute!, levels, isMember: false);
 
 			item.OriginalXDataId = xdataId;
 			item.RegisteredLink = registered;

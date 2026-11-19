@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ELPROCAD.Analysis.Extraction;
 using ELPROCAD.CAD.Library.Analysis.Sheets;
 using ELPROCAD.CAD.Library.CadEntity;
 using ELPROCAD.DataAccess.Contracts.MDBX.Aspects;
@@ -26,6 +27,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 		private readonly IPdsxRepository _pdsx;
 		private readonly IMdbxRepository _mdbx;
 		private readonly CadSymbolLinkReconciler _symbolLinkReconciler;
+		private readonly IElprocadObjectExtractor _extractor;
 
 		// TODO: Replace legacy BET1 with DES1 when the symbols are migrated.
 		private const string LocationAttributeTag = "BET1";
@@ -35,12 +37,15 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 
 		// Retained for compatibility; per-block copy state lives in ImportBlock.
 		internal Guid? CopiedObjectId { get; set; }
-		public AnalysisBlockImporter(IPdsxRepository pdsx, IMdbxRepository mdbx, CadSymbolLinkReconciler symbolLinkReconciler)
+
+		public AnalysisBlockImporter(IPdsxRepository pdsx, IMdbxRepository mdbx, CadSymbolLinkReconciler symbolLinkReconciler, IElprocadObjectExtractor extractor)
 		{
 			_pdsx = pdsx ?? throw new ArgumentNullException(nameof(pdsx));
 			_mdbx = mdbx ?? throw new ArgumentNullException(nameof(mdbx));
 			_symbolLinkReconciler = symbolLinkReconciler ?? throw new ArgumentNullException(nameof(symbolLinkReconciler));
+			_extractor = extractor ?? throw new ArgumentNullException(nameof(extractor));
 		}
+
 		/// <summary>Imports one sheet, applies CAD presentation changes and reconciles missing links.</summary>
 		public (int CreatedLocations, int ProcessedBlocks, int RemovedSymbolLinks,
 			IReadOnlyList<(AcDb.ObjectId BlockId, string Message)> Errors)
@@ -62,6 +67,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 				.ToDictionary(location => location.Id);
 			var processedBlocks = UpdateCadPresentations(doc, context, finalLocations, result);
 			var removedLinks = ReconcileSymbolLinks(doc, context);
+			StoreConnections(result, context);
 			var createdLocations = finalLocations.Keys.Count(id => !context.OriginalLocations.ContainsKey(id));
 
 			return (createdLocations, processedBlocks, removedLinks, context.Errors.AsReadOnly());

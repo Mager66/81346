@@ -95,7 +95,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 
 					string Value(string tag) => attributes.TryGetValue(tag, out var attribute) ? attribute.TextString : string.Empty;
 
-					designation = Value(LocationAttributeTag);
+					designation = Value(_extractor.DesignationAttributeTag);
 
 					if (!attributes.TryGetValue("XREF", out var xref))
 					{
@@ -114,13 +114,12 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 							"The symbol role has changed. Analyze again.");
 					}
 
-					if (reference != null &&
-						(!string.Equals(
-							definition.Name,
-							reference.BlockName,
-							StringComparison.OrdinalIgnoreCase) ||
-						 designation != reference.Designation ||
-						 Value("PLAC") != reference.Placement))
+					if (reference != null && (!string.Equals(
+						definition.Name,
+						reference.BlockName,
+						StringComparison.OrdinalIgnoreCase) ||
+						designation != reference.Designation ||
+						Value(_extractor.PlacementAttributeTag) != reference.Placement))
 					{
 						throw new InvalidOperationException(
 							"The reference symbol differs from its stored analysis. Analyze again.");
@@ -169,11 +168,9 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 							.GetByProjectId(project.Id)
 							.ToDictionary(x => x.Id);
 
-						if (entity.ProjectId != project.Id ||
-							!entity.LocationId.HasValue ||
-							!SamePath(
-								ParseLocation(designation),
-								ReadPath(entity.LocationId.Value, locations)))
+						if (entity.ProjectId != project.Id ||	!entity.LocationId.HasValue || !SamePath(
+							ExtractLocationLevels(attributes.Values.Select(x => (x.Tag, (string?)x.TextString))),
+							ReadPath(entity.LocationId.Value, locations)))
 						{
 							throw new InvalidOperationException(
 								"The symbol designation differs from the database. Analyze again.");
@@ -201,7 +198,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 				}
 				catch (Exception exception)
 				{
-					errors.Add($"Block {link.BlockHandle:X}, BET1='{designation}': {exception.Message}");
+					errors.Add($"Block {link.BlockHandle:X}, " + $"{_extractor.DesignationAttributeTag}='{designation}': " + exception.Message);
 				}
 			}
 			return (updated, unchanged, errors.AsReadOnly());

@@ -23,30 +23,6 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 {
 	public sealed partial class AnalysisBlockImporter
 	{
-
-		private static string[] ParseLocation(string value)
-		{
-			var text = value.Trim();
-
-			if (text.StartsWith(LocationPrefix, StringComparison.Ordinal))
-				text = text.Substring(LocationPrefix.Length);
-
-			// Membership notation points to the same location node.
-			// Object membership and representation are handled separately.
-			if (text.EndsWith(LevelSeparator.ToString(), StringComparison.Ordinal))
-				text = text.Substring(0, text.Length - 1);
-
-			string[] levels = text
-				.Split(new[] { LevelSeparator }, StringSplitOptions.None)
-				.Select(level => level.Trim())
-				.ToArray();
-
-			if (levels.Any(level => string.IsNullOrWhiteSpace(level)))
-				throw new ArgumentException($"Location designation '{value}' contains an empty level.", nameof(value));
-
-			return levels;
-		}
-
 		private static string[] ReadPath(Guid locationId, IReadOnlyDictionary<Guid, ILocation> locations)
 		{
 			var levels = new List<string>();

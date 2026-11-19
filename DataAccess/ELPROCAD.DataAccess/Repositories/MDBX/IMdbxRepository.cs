@@ -1,4 +1,5 @@
 ﻿using ELPROCAD.DataAccess.Repositories.MDBX.Aspects;
+using ELPROCAD.DataAccess.Repositories.MDBX.Connections;
 using ELPROCAD.DataAccess.Repositories.MDBX.Documents;
 using ELPROCAD.DataAccess.Repositories.MDBX.Objects;
 
@@ -24,5 +25,7 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX
 		IEngineeringObjectRepository EngineeringObject { get; }
 
 		ICadSymbolLinkRepository CadSymbolLink { get; }
+
+		IConnectionAnalysisRepository ConnectionAnalysis { get; }
 	}
 }

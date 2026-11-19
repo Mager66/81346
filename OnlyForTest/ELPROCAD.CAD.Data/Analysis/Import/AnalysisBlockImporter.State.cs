@@ -66,7 +66,7 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 					? value
 					: "<missing>";
 
-				Errors.Add((blockId, $"BET1='{designation}': {message}"));
+				Errors.Add((blockId, $"{designation}: {message}"));
 			}
 		}
 

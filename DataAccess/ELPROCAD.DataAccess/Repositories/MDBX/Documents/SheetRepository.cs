@@ -1,6 +1,7 @@
 ﻿using DevExpress.Xpo;
 using ELPROCAD.DataAccess.Contracts.MDBX.Documents;
 using ELPROCAD.DataAccess.CRUD;
+using ELPROCAD.DataAccess.Models.MDBX.Connections;
 using ELPROCAD.DataAccess.Models.MDBX.Documents;
 using ELPROCAD.DataAccess.Models.MDBX.Objects;
 using ELPROCAD.DataAccess.Validation;
@@ -103,10 +104,16 @@ namespace ELPROCAD.DataAccess.Repositories.MDBX.Documents
 					link.SheetId == existing.Id &&
 					link.DetachedAtUtc == null);
 
-					return hasSymbols
+					var hasConnections =
+					new XPQuery<ConnectionNetwork>(unitOfWork)
+					.Any(network => network.SheetId == existing.Id)
+					|| new XPQuery<ConnectionPoint>(unitOfWork)
+					.Any(point => point.SheetId == existing.Id);
+
+					return hasSymbols || hasConnections
 					? ValidationResults.Failure(
 						string.Empty,
-						"The sheet cannot be deleted while CAD symbol links reference it.")
+						"The sheet cannot be deleted while symbols or connection topology reference it.")
 					: new ValidationResult();
 				});
 		}

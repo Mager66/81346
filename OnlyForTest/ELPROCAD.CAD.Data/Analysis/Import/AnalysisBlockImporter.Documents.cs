@@ -47,11 +47,15 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 
 			var project = projects[0];
 
+			var locations = _mdbx.Location.GetByProjectId(project.Id).ToDictionary(location => location.Id);
+
+			if (locations.Values.Any(location => location.ParentId.HasValue))
+				throw new InvalidOperationException(
+					"The ELPROCAD profile requires flat Location entries. Existing hierarchical data cannot be converted by analysis.");			
+
 			var document = GetOrCreateDocument(project.Id, doc.Name);
 
 			var sheet = GetOrCreateSheet(document.Id, result.TitleBlock.SheetNo, result.TitleBlock.IsMultiSheet);
-
-			var locations = _mdbx.Location.GetByProjectId(project.Id).ToDictionary(location => location.Id);
 
 			return new ImportContext(project.Id, document, sheet, locations);
 		}

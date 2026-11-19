@@ -32,6 +32,7 @@ namespace ELPROCAD.CAD.Commands
 
 		public void Initialize()
 		{
+			AcAp.Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage("Hej Svejs");
 			AcAp.Application.DocumentManager.DocumentBecameCurrent += DocumentManager_DocumentBecameCurrent;
 			ConnectToDb();
 		}

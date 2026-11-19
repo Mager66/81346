@@ -39,9 +39,8 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 						item.SourceLocationId!.Value,
 						finalLocations);
 
+					VerifyLocationAttributes(doc, item, finalPath);
 					SaveSymbolTerminals(context, item, objectId, analysis);
-
-					WriteLocationAttribute(doc, item, finalPath);
 
 					// Replace inherited XData only when the resolved object has a different GUID.
 					if (item.CopiedObjectId.HasValue &&	item.CopiedObjectId.Value != objectId)
@@ -78,50 +77,6 @@ namespace ELPROCAD.CAD.Data.Analysis.Import
 			foreach (var message in reconciliation.Errors)
 				context.Errors.Add((AcDb.ObjectId.Null, message));
 			return reconciliation.RemovedLinks;
-		}
-
-		private static void WriteLocationAttribute(AcAp.Document doc, ImportBlock item, IReadOnlyList<string> levels)
-		{
-			var originalText = item.Attribute.Value;
-			var trimmed = originalText.Trim();
-
-			var prefix = trimmed.StartsWith(
-				LocationPrefix,
-				StringComparison.Ordinal)
-					? LocationPrefix
-					: string.Empty;
-
-			var newText =
-				prefix +
-				string.Join(LevelSeparator.ToString(), levels) +
-				(item.IsMember ? LevelSeparator.ToString() : string.Empty);
-
-			if (string.Equals(originalText, newText, StringComparison.Ordinal))
-				return;
-
-			using var transaction = doc.Database.TransactionManager
-				.StartTransaction();
-
-			var attribute = transaction.GetObject(
-				item.Attribute.ObjectId,
-				AcDb.OpenMode.ForRead) as AcDb.AttributeReference
-				?? throw new InvalidOperationException(
-					"The location attribute no longer exists.");
-
-			if (!string.Equals(
-				attribute.TextString,
-				originalText,
-				StringComparison.Ordinal))
-			{
-				throw new InvalidOperationException(
-					"The location attribute changed during analysis. " +
-					"The database may already have been updated; run the analysis again.");
-			}
-
-			attribute.UpgradeOpen();
-			attribute.TextString = newText;
-
-			transaction.Commit();
 		}
 	}
 }

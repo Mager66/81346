@@ -6,6 +6,10 @@
 		System.Guid EngineeringObjectId { get; }
 		string Designation { get; }
 		int? LoadedVersion { get; }
+
+		int? ConfiguredMaxWireConnections { get; }
+
+		int MaxWireConnections { get; }
 	}
 }
 

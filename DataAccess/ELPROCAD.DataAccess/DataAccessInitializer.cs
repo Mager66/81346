@@ -5,6 +5,7 @@ using ELPROCAD.DataAccess.CRUD;
 using ELPROCAD.DataAccess.Database;
 using ELPROCAD.DataAccess.Database.Migrations;
 using ELPROCAD.DataAccess.Models.MDBX.Aspects;
+using ELPROCAD.DataAccess.Models.MDBX.Connections;
 using ELPROCAD.DataAccess.Models.MDBX.Documents;
 using ELPROCAD.DataAccess.Models.MDBX.Objects;
 using ELPROCAD.DataAccess.Models.MDBX.References;
@@ -14,6 +15,7 @@ using ELPROCAD.DataAccess.Models.PDSX.Documents;
 using ELPROCAD.DataAccess.Models.PDSX.ProjectData;
 using ELPROCAD.DataAccess.Repositories.MDBX;
 using ELPROCAD.DataAccess.Repositories.MDBX.Aspects;
+using ELPROCAD.DataAccess.Repositories.MDBX.Connections;
 using ELPROCAD.DataAccess.Repositories.MDBX.Documents;
 using ELPROCAD.DataAccess.Repositories.MDBX.Objects;
 using ELPROCAD.DataAccess.Repositories.PDSX;
@@ -83,7 +85,12 @@ namespace ELPROCAD.DataAccess
 					typeof(TopographicStructure),
 					typeof(Location),
 					typeof(Function),
-					typeof(Product)
+					typeof(Product),
+					typeof(ConnectionNetwork),
+					typeof(ConnectionPoint),
+					typeof(ConnectionNetworkPoint),
+					typeof(ConnectionPointLink),
+					typeof(ElectricalPotential)
 				});
 
 			var database = new DatabaseAccess(connectionString);
@@ -108,7 +115,8 @@ namespace ELPROCAD.DataAccess
 				new CadDocumentCustomPropertyRepository(read),
 				new LocationRepository(read, create, update, delete, new MoveLocation(database), new LocationChangeWriter(database)),
 				new EngineeringObjectRepository(read, create, update),
-				new CadSymbolLinkRepository(read, create, update));
+				new CadSymbolLinkRepository(read, create, update),
+				new ConnectionAnalysisRepository(database));
 		}
 
 		/// <summary>

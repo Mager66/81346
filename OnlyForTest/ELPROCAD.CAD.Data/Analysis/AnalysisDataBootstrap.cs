@@ -1,4 +1,6 @@
-﻿using ELPROCAD.CAD.Data.Analysis.Import;
+﻿using ELPROCAD.Analysis.Configuration;
+using ELPROCAD.Analysis.Extraction;
+using ELPROCAD.CAD.Data.Analysis.Import;
 using ELPROCAD.DataAccess;
 using ELPROCAD.DataAccess.Repositories.MDBX;
 using ELPROCAD.DataAccess.Repositories.PDSX;
@@ -19,6 +21,12 @@ namespace ELPROCAD.CAD.Data.Analysis
 					nameof(projectDirectory));
 
 			var directory = Path.GetFullPath(projectDirectory);
+
+			// Validate the explicitly selected project profile before registering database factories.
+			var extractor = ExtractionProfiles.LoadElprocadJson(
+				File.ReadAllText(Path.Combine(directory, "Extraction.json")));
+
+			services.AddSingleton<IElprocadObjectExtractor>(extractor);
 
 			ELPROCAD.DataAccess.DependencyInjection.AddElprocadDataAccess(services);
 
